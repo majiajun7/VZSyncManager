@@ -97,7 +97,7 @@ class Zabbix:
         response = requests.post(self.url, json.dumps(data), headers=self.header)
         return response.json()
 
-    def update_host(self, hostid, displayname=None, macro=None, group_list=None, name=None, interfaces=None):
+    def update_host(self, hostid, displayname=None, macro=None, group_list=None, name=None, interface=None):
         data = {
             "jsonrpc": "2.0",
             "method": "host.update",
