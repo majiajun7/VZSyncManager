@@ -82,6 +82,14 @@ def run():
                      "IT中心测试区VCenter": "672",
                      "IT中心物理内网VCenter": "602",
                      "IT中心物理内网云桌面VCenter": "873"}
+    area_proxyid_dict = {"IT中心管理VCenter": "0",
+                         "IT中心云桌面VCenter": "0",
+                         "IT中心DMZ区VCenter": "0",
+                         "IT中心产线区VCenter": "0",
+                         "IT中心研发域VCenter": "22929",
+                         "IT中心测试区VCenter": "0",
+                         "IT中心物理内网VCenter": "22929",
+                         "IT中心物理内网云桌面VCenter": "22929"}
 
     for host in hosts:
         # 若主机已存在：
@@ -134,8 +142,8 @@ def run():
             # vc_url = \
             # pgsql.execute('SELECT vc_url FROM "vCenter_certficate" WHERE host_name=\'%s\'' % host_name).fetchall()[0][0]
             host_vc_url = \
-            pgsql.execute('SELECT vc_url FROM "vCenter_certficate" WHERE vc_name=\'%s\'' % host[0]).fetchall()[0][
-                0] + "/sdk"
+                pgsql.execute('SELECT vc_url FROM "vCenter_certficate" WHERE vc_name=\'%s\'' % host[0]).fetchall()[0][
+                    0] + "/sdk"
             if host_url != host_vc_url or host_uuid != host[2]:
                 host_macro = [{
                     "macro": "{$VMWARE.URL}",
@@ -183,8 +191,8 @@ def run():
                 }
             ]
             host_vc_url = \
-            pgsql.execute('SELECT vc_url FROM "vCenter_certficate" WHERE vc_name=\'%s\'' % host[0]).fetchall()[0][
-                0] + "/sdk"
+                pgsql.execute('SELECT vc_url FROM "vCenter_certficate" WHERE vc_name=\'%s\'' % host[0]).fetchall()[0][
+                    0] + "/sdk"
             host_macro = [{
                 "macro": "{$VMWARE.URL}",
                 "value": host_vc_url,
@@ -195,14 +203,15 @@ def run():
                 }
             ]
 
-            zabbix_obj.create_host(host[2], host[3], area_gid_dict[host[0]], 10123, interface, host_macro)
+            zabbix_obj.create_host(host[2], host[3], area_gid_dict[host[0]], 10123, interface, host_macro, area_proxyid_dict[host[0]])
             logger.info('%s 宿主机在zabbix中不存在，自动创建' % host[3])
 
         # 开始处理宿主机下的虚拟机数据
         # blacklist_ips = {'10.50.68.18', '10.50.68.19', '10.50.68.20', '10.50.68.21', '10.50.68.22', '10.50.68.11',
         #                '10.50.68.12', '10.50.68.13', '10.50.68.14', '10.50.68.15', '10.50.68.16', '10.50.68.17'}
         # if host[0] != "IT中心云桌面VCenter" and host[3] not in blacklist_ips:
-        if host[0] != "IT中心云桌面VCenter" and host[0] != "IT中心测试区VCenter" and host[0] != "IT中心物理内网云桌面VCenter":
+        if host[0] != "IT中心云桌面VCenter" and host[0] != "IT中心测试区VCenter" and host[
+            0] != "IT中心物理内网云桌面VCenter":
             vms = pgsql.execute(
                 'SELECT * FROM "vCenter_vm" WHERE host_name=\'%s\' AND vc_name != \'IT中心云桌面VCenter\'' % host[
                     3]).fetchall()
@@ -231,8 +240,9 @@ def run():
                     # 当zabbix主机可见名称与vcenter不一致或主机uuid与url值与vcenter数据不符时，则将vm_host_macro变量赋值，在后面对主机进行update
                     # 通过vc名称查询vcurl
                     vm_vc_url = \
-                    pgsql.execute('SELECT vc_url FROM "vCenter_certficate" WHERE vc_name=\'%s\'' % vm[0]).fetchall()[0][
-                        0] + "/sdk"
+                        pgsql.execute(
+                            'SELECT vc_url FROM "vCenter_certficate" WHERE vc_name=\'%s\'' % vm[0]).fetchall()[0][
+                            0] + "/sdk"
                     if zabbix_vm_host["name"] != vm[3] or vm_url != vm_vc_url or vm_uuid != vm[2]:
                         # print(zabbix_vm_host["name"] != vm[3] , vm_url != vm_vc_url , vm_uuid != vm[2])
                         # if not (zabbix_vm_host["name"] == vm[3] and result == vm[2] and result1 == vc_url + "/sdk"):
@@ -301,8 +311,9 @@ def run():
                         }
                     ]
                     vm_vc_url = \
-                    pgsql.execute('SELECT vc_url FROM "vCenter_certficate" WHERE vc_name=\'%s\'' % vm[0]).fetchall()[0][
-                        0] + "/sdk"
+                        pgsql.execute(
+                            'SELECT vc_url FROM "vCenter_certficate" WHERE vc_name=\'%s\'' % vm[0]).fetchall()[0][
+                            0] + "/sdk"
                     vm_host_macro = [{
                         "macro": "{$VMWARE.URL}",
                         "value": vm_vc_url,
@@ -312,7 +323,7 @@ def run():
                             "value": vm[2]
                         }
                     ]
-                    zabbix_obj.create_host(vm[2], vm[3], group_id, 10124, interface, vm_host_macro)
+                    zabbix_obj.create_host(vm[2], vm[3], group_id, 10124, interface, vm_host_macro, area_proxyid_dict[host[0]])
                     logger.info('虚拟机 %s 主机创建成功' % vm[3])
                     # 删除变量，防止下一次循环被调用
                     del vm_host_macro

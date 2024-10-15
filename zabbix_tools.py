@@ -58,7 +58,8 @@ class Zabbix:
                     return host
 
         return False
-    def create_host(self, name, displayname, group_id, template_id=None, interface=None, macros=None):
+
+    def create_host(self, name, displayname, group_id, template_id=None, interface=None, macros=None, proxy_hostid=0):
         data = {
             "jsonrpc": "2.0",
             "method": "host.create",
@@ -70,7 +71,7 @@ class Zabbix:
                         "groupid": group_id
                     }
                 ],
-
+                "proxy_hostid": proxy_hostid
             },
             "auth": self.session,
             "id": 1
@@ -82,7 +83,7 @@ class Zabbix:
         if template_id:
             data["params"]["templates"] = [{"templateid": template_id}]
         response = requests.post(self.url, json.dumps(data), headers=self.header)
-        # print(response.text)
+    # print(response.text)
 
     def create_host_group(self, name):
         data = {
