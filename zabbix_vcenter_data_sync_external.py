@@ -67,7 +67,12 @@ class DataProcess:
     def __init__(self, data):
         self.conn = psycopg2.connect(f"host=10.20.120.239 dbname=script user=postgres password=^cA&PVp4rrR3Tvs^HPiQ")
         self.pgsql = self.conn.cursor()
-        self.data = data
+        self.data = []
+        for item in data:
+            if isinstance(item, list):
+                self.data.extend(item)
+            else:
+                self.data.append(item)
 
     def start_sync(self):
         self.__sync_datacenter()
