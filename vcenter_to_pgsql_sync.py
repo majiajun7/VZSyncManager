@@ -135,7 +135,7 @@ def main():
     start_time = time.time()
 
     pgsql = psycopg.connect("host=10.20.120.239 dbname=script user=postgres password=^cA&PVp4rrR3Tvs^HPiQ")
-    certificate_tup = pgsql.execute('SELECT * FROM "vCenter_certficate"').fetchall()
+    certificate_tup = pgsql.execute('SELECT * FROM "vCenter_certficate" WHERE internal = false').fetchall()
 
     processes = []
     for certificate in certificate_tup:
