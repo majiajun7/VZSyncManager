@@ -79,7 +79,9 @@ def run():
                      "IT中心DMZ区VCenter": "330",
                      "IT中心产线区VCenter": "329",
                      "IT中心研发域VCenter": "567",
-                     "IT中心测试区VCenter": "672"}
+                     "IT中心测试区VCenter": "672",
+                     "IT中心物理内网VCenter": "602",
+                     "IT中心物理内网云桌面VCenter": "873"}
 
     for host in hosts:
         # 若主机已存在：
@@ -200,7 +202,7 @@ def run():
         # blacklist_ips = {'10.50.68.18', '10.50.68.19', '10.50.68.20', '10.50.68.21', '10.50.68.22', '10.50.68.11',
         #                '10.50.68.12', '10.50.68.13', '10.50.68.14', '10.50.68.15', '10.50.68.16', '10.50.68.17'}
         # if host[0] != "IT中心云桌面VCenter" and host[3] not in blacklist_ips:
-        if host[0] != "IT中心云桌面VCenter" and host[0] != "IT中心测试区VCenter":
+        if host[0] != "IT中心云桌面VCenter" and host[0] != "IT中心测试区VCenter" and host[0] != "IT中心物理内网云桌面VCenter":
             vms = pgsql.execute(
                 'SELECT * FROM "vCenter_vm" WHERE host_name=\'%s\' AND vc_name != \'IT中心云桌面VCenter\'' % host[
                     3]).fetchall()
