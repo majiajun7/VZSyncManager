@@ -115,8 +115,8 @@ class Zabbix:
             data["params"]["groups"] = group_list
         if name:
             data["params"]["host"] = name
-        if interfaces:
-            data["params"]["interfaces"] = interfaces
+        if interface:
+            data["params"]["interfaces"] = interface
 
 
         response = requests.post(self.url, json.dumps(data), headers=self.header)
