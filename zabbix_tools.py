@@ -83,6 +83,7 @@ class Zabbix:
         if template_id:
             data["params"]["templates"] = [{"templateid": template_id}]
         response = requests.post(self.url, json.dumps(data), headers=self.header)
+
     # print(response.text)
 
     def create_host_group(self, name):
@@ -98,12 +99,14 @@ class Zabbix:
         response = requests.post(self.url, json.dumps(data), headers=self.header)
         return response.json()
 
-    def update_host(self, hostid, displayname=None, macro=None, group_list=None, name=None, interface=None):
+    def update_host(self, hostid, displayname=None, macro=None, group_list=None, name=None, interface=None,
+                    proxy_hostid=0):
         data = {
             "jsonrpc": "2.0",
             "method": "host.update",
             "params": {
-                "hostid": hostid
+                "hostid": hostid,
+                "proxy_hostid": proxy_hostid
             },
             "auth": self.session,
             "id": 1
@@ -119,10 +122,8 @@ class Zabbix:
         if interface:
             data["params"]["interfaces"] = interface
 
-
         response = requests.post(self.url, json.dumps(data), headers=self.header)
-        print(response.text)
-        print(displayname, "???????")
+        print("update_host:" + displayname)
 
     def get_host_id(self, hostname=None, serial_number=None):
         if hostname:
@@ -228,6 +229,7 @@ class Zabbix:
         host_id = self.get_host_id(serial_number=serial_number)
         if host_id:
             inventory = ['VMware: CPU cores', 'VMware: Total memory']
+
 
 if __name__ == '__main__':
     def override_hosts():
