@@ -26,6 +26,7 @@ def get_vcenter_data(certificate):
             datacenter = host_futures[future]
             try:
                 hosts = future.result()
+                datacenter = host_futures[future]
                 for host in hosts:
                     host['datacenter_name'] = datacenter['name']
                 host_data.extend(hosts)
@@ -35,6 +36,7 @@ def get_vcenter_data(certificate):
                 for vm_future in concurrent.futures.as_completed(vm_futures):
                     try:
                         vms = vm_future.result()
+                        host = vm_futures[vm_future]
                         for vm in vms:
                             vm['host_name'] = host['name']
                         vm_data.extend(vms)
