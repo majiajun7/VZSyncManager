@@ -65,8 +65,14 @@ def run():
         # 检查宿主机是否存在于Zabbix
         zabbix_host = zabbix_obj.check_host_exist(host[2], host[3])
 
+        group_id = None
+
         if zabbix_host:
             group_id = get_host_group_id(host[3], zabbix_obj)
+
+            if group_id is None:
+                print('获取Zabbix主机组ID失败，跳过宿主机: %s' % host[3])
+                continue
 
             # 若宿主机名称不匹配，更新Zabbix中的名称及接口
             if not host[3] in zabbix_host["name"]:
@@ -120,13 +126,14 @@ def run():
                         if host[3] in group['name']:
                             break
                     else:
+                        remove_group_id = None
                         for group in vm_group_info:
                             if '10.' in group['name'] or '192.' in group['name']:
                                 remove_group_id = group['groupid']
                                 break
 
                         vm_host_group = [{"groupid": group["groupid"]} for group in zabbix_vm_host["groups"]]
-                        if 'remove_group_id' in locals():
+                        if remove_group_id:
                             vm_host_group.remove({"groupid": remove_group_id})
                             del remove_group_id
                         vm_host_group.append({"groupid": group_id})
