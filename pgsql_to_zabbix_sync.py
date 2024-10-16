@@ -19,7 +19,7 @@ def get_host_group_id(host_name, zabbix):
     for group in group_info["result"]:
         if re.search("%s$" % host_name, group["name"]):
             group_id = group["groupid"]
-            print("%s 该宿主机已存在主机群组，跳过主机群组创建步骤" % host_name)
+            # print("%s 该宿主机已存在主机群组，跳过主机群组创建步骤" % host_name)
             return group_id
     else:
         group_id = zabbix.create_host_group(host_name)["result"]["groupids"][0]
@@ -42,6 +42,30 @@ def get_macro(macros):
         if result_url and result_uuid:
             break
     return result_url, result_uuid
+
+
+def cleanup_unused_host_groups(zabbix_obj):
+    """
+    清理与宿主机相关且无主机的主机群组。
+    :param zabbix_obj: Zabbix API对象
+    """
+    # 获取所有主机群组
+    host_groups = zabbix_obj.get_host_group_all()["result"]
+
+    # 遍历所有群组，检查是否需要清理
+    for group in host_groups:
+        group_id = group['groupid']
+        group_name = group['name']
+
+        # 假设宿主机群组的名称以 'HostGroup_' 开头（你可以根据实际情况修改正则表达式）
+        if re.match(r'((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})(\.((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})){3}', group_name):
+            # 获取该群组下的所有主机
+            hosts_in_group = zabbix_obj.get_hosts_by_group(group_id)
+
+            # 如果该群组下没有主机，且名称符合条件，删除该群组
+            if not hosts_in_group["result"]:
+                # zabbix_obj.delete_host_group(group_id)
+                logger.info(f"删除无主机的宿主机群组: {group_name} (ID: {group_id})")
 
 
 def run():
@@ -171,6 +195,8 @@ def run():
             host_macro = [{"macro": "{$VMWARE.URL}", "value": host_vc_url}, {"macro": "{$VMWARE.HV.UUID}", "value": host[2]}]
             zabbix_obj.create_host(host[2], host[3], area_gid_dict[host[0]], 10123, interface, host_macro, area_proxyid_dict[host[0]])
             logger.info('%s 宿主机创建成功' % host[3])
+
+    cleanup_unused_host_groups(zabbix_obj)
 
     pgsql.close()
     conn.close()

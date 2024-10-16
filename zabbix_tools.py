@@ -231,6 +231,42 @@ class Zabbix:
         if host_id:
             inventory = ['VMware: CPU cores', 'VMware: Total memory']
 
+    def delete_host_group(self, group_id):
+        """
+        删除指定的主机群组
+        :param group_id: 要删除的主机群组ID
+        """
+        data = {
+            "jsonrpc": "2.0",
+            "method": "hostgroup.delete",
+            "params": [
+                group_id
+            ],
+            "auth": self.session,
+            "id": 1
+        }
+        response = requests.post(self.url, json.dumps(data), headers=self.header)
+        return response.json()  # 返回API调用的结果
+
+    def get_hosts_by_group(self, group_id):
+        """
+        根据群组ID获取该群组下的所有主机
+        :param group_id: 主机群组ID
+        :return: 返回该群组下所有主机的信息
+        """
+        data = {
+            "jsonrpc": "2.0",
+            "method": "host.get",
+            "params": {
+                "groupids": group_id,  # 传入指定的群组ID
+                "output": "extend"  # 可以返回主机的详细信息
+            },
+            "auth": self.session,
+            "id": 1
+        }
+        response = requests.post(self.url, json.dumps(data), headers=self.header)
+        return response.json()  # 返回API调用的结果
+
 
 if __name__ == '__main__':
     def override_hosts():
