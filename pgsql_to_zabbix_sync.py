@@ -65,8 +65,6 @@ def run():
         # 检查宿主机是否存在于Zabbix
         zabbix_host = zabbix_obj.check_host_exist(host[2], host[3])
 
-        group_id = None
-
         if zabbix_host:
             group_id = get_host_group_id(host[3], zabbix_obj)
 
@@ -99,6 +97,72 @@ def run():
                 zabbix_obj.update_host(zabbix_host["hostid"], zabbix_host["name"], host_macro, host_group_id, proxy_hostid=area_proxyid_dict[host[0]])
                 logger.info('更新宿主机信息')
 
+            # 处理宿主机下的虚拟机数据
+            if host[0] not in {"IT中心云桌面VCenter", "IT中心测试区VCenter", "IT中心物理内网云桌面VCenter"}:
+                vms = pgsql.execute(
+                    'SELECT * FROM "vCenter_vm" WHERE host_name=\'%s\' AND vc_name != \'IT中心云桌面VCenter\'' % host[
+                        3]).fetchall()
+                for vm in vms:
+                    zabbix_vm_host = zabbix_obj.check_vm_host_exist(vm[2])
+
+                    if zabbix_vm_host:
+                        vm_host_macro = None
+                        vm_host_group = None
+
+                        vm_url, vm_uuid = get_macro(zabbix_vm_host["macros"])
+                        vm_vc_url = pgsql.execute(
+                            'SELECT vc_url FROM "vCenter_certficate" WHERE vc_name=\'%s\'' % vm[0]).fetchall()[0][
+                                        0] + "/sdk"
+
+                        if zabbix_vm_host["name"] != vm[3] or vm_url != vm_vc_url or vm_uuid != vm[2]:
+                            vm_host_macro = [{"macro": "{$VMWARE.URL}", "value": vm_vc_url},
+                                             {"macro": "{$VMWARE.VM.UUID}", "value": vm[2]}]
+
+                        vm_group_info = zabbix_vm_host['groups']
+                        for group in vm_group_info:
+                            if host[3] in group['name']:
+                                break
+                        else:
+                            remove_group_id = None
+                            for group in vm_group_info:
+                                if '10.' in group['name'] or '192.' in group['name']:
+                                    remove_group_id = group['groupid']
+                                    break
+
+                            vm_host_group = [{"groupid": group["groupid"]} for group in zabbix_vm_host["groups"]]
+                            if remove_group_id:
+                                vm_host_group.remove({"groupid": remove_group_id})
+                            vm_host_group.append({"groupid": group_id})
+
+                        if vm_host_macro or vm_host_group:
+                            update_args = {
+                                "hostid": zabbix_vm_host["hostid"],
+                                "displayname": vm[3],
+                            }
+                            if vm_host_macro:
+                                update_args["macros"] = vm_host_macro
+                            if vm_host_group:
+                                update_args["group_list"] = vm_host_group
+                            zabbix_obj.update_host(**update_args)
+
+                            update_parts = []
+                            if vm_host_macro:
+                                update_parts.append("宏")
+                            if vm_host_group:
+                                update_parts.append("群组")
+                            logger.info('更新 %s 虚拟机信息: %s' % (vm[3], ','.join(update_parts)))
+
+                    else:
+                        interface = [{"type": 1, "main": 1, "useip": 1, "ip": vm[4], "dns": "", "port": "10050"}]
+                        vm_vc_url = pgsql.execute(
+                            'SELECT vc_url FROM "vCenter_certficate" WHERE vc_name=\'%s\'' % vm[0]).fetchall()[0][
+                                        0] + "/sdk"
+                        vm_host_macro = [{"macro": "{$VMWARE.URL}", "value": vm_vc_url},
+                                         {"macro": "{$VMWARE.VM.UUID}", "value": vm[2]}]
+                        zabbix_obj.create_host(vm[2], vm[3], group_id, 10124, interface, vm_host_macro,
+                                               area_proxyid_dict[host[0]])
+                        logger.info('虚拟机 %s 主机创建成功' % vm[3])
+
         else:
             # 创建宿主机
             interface = [{"type": 1, "main": 1, "useip": 1, "ip": host[3], "dns": "", "port": "443"},
@@ -107,57 +171,6 @@ def run():
             host_macro = [{"macro": "{$VMWARE.URL}", "value": host_vc_url}, {"macro": "{$VMWARE.HV.UUID}", "value": host[2]}]
             zabbix_obj.create_host(host[2], host[3], area_gid_dict[host[0]], 10123, interface, host_macro, area_proxyid_dict[host[0]])
             logger.info('%s 宿主机创建成功' % host[3])
-
-        # 处理宿主机下的虚拟机数据
-        if host[0] not in {"IT中心云桌面VCenter", "IT中心测试区VCenter", "IT中心物理内网云桌面VCenter"}:
-            vms = pgsql.execute('SELECT * FROM "vCenter_vm" WHERE host_name=\'%s\' AND vc_name != \'IT中心云桌面VCenter\'' % host[3]).fetchall()
-            for vm in vms:
-                zabbix_vm_host = zabbix_obj.check_vm_host_exist(vm[2])
-
-                if zabbix_vm_host:
-                    vm_url, vm_uuid = get_macro(zabbix_vm_host["macros"])
-                    vm_vc_url = pgsql.execute('SELECT vc_url FROM "vCenter_certficate" WHERE vc_name=\'%s\'' % vm[0]).fetchall()[0][0] + "/sdk"
-
-                    if zabbix_vm_host["name"] != vm[3] or vm_url != vm_vc_url or vm_uuid != vm[2]:
-                        vm_host_macro = [{"macro": "{$VMWARE.URL}", "value": vm_vc_url}, {"macro": "{$VMWARE.VM.UUID}", "value": vm[2]}]
-
-                    vm_group_info = zabbix_vm_host['groups']
-                    for group in vm_group_info:
-                        if host[3] in group['name']:
-                            break
-                    else:
-                        remove_group_id = None
-                        for group in vm_group_info:
-                            if '10.' in group['name'] or '192.' in group['name']:
-                                remove_group_id = group['groupid']
-                                break
-
-                        vm_host_group = [{"groupid": group["groupid"]} for group in zabbix_vm_host["groups"]]
-                        if remove_group_id:
-                            vm_host_group.remove({"groupid": remove_group_id})
-                            del remove_group_id
-                        vm_host_group.append({"groupid": group_id})
-
-                    if 'vm_host_macro' in locals() and 'vm_host_group' in locals():
-                        zabbix_obj.update_host(zabbix_vm_host["hostid"], vm[3], vm_host_macro, vm_host_group)
-                        logger.info('更新 %s 虚拟机信息' % vm[3])
-                        del vm_host_macro, vm_host_group
-                    elif 'vm_host_macro' in locals():
-                        zabbix_obj.update_host(zabbix_vm_host["hostid"], vm[3], vm_host_macro)
-                        logger.info('更新 %s 虚拟机宏' % vm[3])
-                        del vm_host_macro
-                    elif 'vm_host_group' in locals():
-                        zabbix_obj.update_host(zabbix_vm_host["hostid"], vm[3], group_list=vm_host_group)
-                        logger.info('更新 %s 虚拟机群组' % vm[3])
-                        del vm_host_group
-
-                else:
-                    interface = [{"type": 1, "main": 1, "useip": 1, "ip": vm[4], "dns": "", "port": "10050"}]
-                    vm_vc_url = pgsql.execute('SELECT vc_url FROM "vCenter_certficate" WHERE vc_name=\'%s\'' % vm[0]).fetchall()[0][0] + "/sdk"
-                    vm_host_macro = [{"macro": "{$VMWARE.URL}", "value": vm_vc_url}, {"macro": "{$VMWARE.VM.UUID}", "value": vm[2]}]
-                    zabbix_obj.create_host(vm[2], vm[3], group_id, 10124, interface, vm_host_macro, area_proxyid_dict[host[0]])
-                    logger.info('虚拟机 %s 主机创建成功' % vm[3])
-                    del vm_host_macro
 
     pgsql.close()
     conn.close()
