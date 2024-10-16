@@ -224,9 +224,9 @@ class DataProcess:
         for record in records:
             vc_name, vm_id, vm_uuid, vm_name, ipaddress, power_state, cpu_count, memory_size, host_name = record
 
-            if not cpu_count.isdigit():
+            if not cpu_count:
                 cpu_count = 0
-            if not memory_size.isdigit():
+            if not memory_size:
                 memory_size = 0
 
             self.pgsql.execute(
