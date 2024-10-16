@@ -100,13 +100,12 @@ class Zabbix:
         return response.json()
 
     def update_host(self, hostid, displayname=None, macro=None, group_list=None, name=None, interface=None,
-                    proxy_hostid=0):
+                    proxy_hostid=None):
         data = {
             "jsonrpc": "2.0",
             "method": "host.update",
             "params": {
                 "hostid": hostid,
-                "proxy_hostid": proxy_hostid
             },
             "auth": self.session,
             "id": 1
@@ -121,6 +120,8 @@ class Zabbix:
             data["params"]["host"] = name
         if interface:
             data["params"]["interfaces"] = interface
+        if proxy_hostid:
+            data["params"]["proxy_hostid"] = proxy_hostid
 
         response = requests.post(self.url, json.dumps(data), headers=self.header)
         # print("update_host:" + displayname)
