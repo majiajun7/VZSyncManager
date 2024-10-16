@@ -123,7 +123,7 @@ class Zabbix:
             data["params"]["interfaces"] = interface
 
         response = requests.post(self.url, json.dumps(data), headers=self.header)
-        print("update_host:" + displayname)
+        # print("update_host:" + displayname)
 
     def get_host_id(self, hostname=None, serial_number=None):
         if hostname:

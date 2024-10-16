@@ -158,14 +158,14 @@ def run():
 
 
 def main():
-    logger.info('开始执行zabbix数据同步脚本。')
+    logger.info('开始同步PostgreSQL数据到zabbix监控平台')
     start_time = time.time()
 
     run()
 
     end_time = time.time()
     process_time = end_time - start_time
-    logger.info('zabbix数据同步脚本执行完成。耗时：%d 秒', process_time)
+    logger.info("PostgreSQL数据同步到zabbix监控平台执行完成。耗时：%.1f 秒" % process_time)
 
 
 if __name__ == '__main__':

@@ -131,7 +131,7 @@ def start_process(certificate):
 
 
 def main():
-    logger.info("开始执行vcenter数据同步脚本。")
+    logger.info('开始同步外网的vCenter数据到PostgreSQL。')
     start_time = time.time()
 
     pgsql = psycopg.connect("host=10.20.120.239 dbname=script user=postgres password=^cA&PVp4rrR3Tvs^HPiQ")
@@ -148,7 +148,7 @@ def main():
 
     end_time = time.time()
     process_time = end_time - start_time
-    logger.info("vcenter数据同步脚本执行完成。耗时：%d 秒" % process_time)
+    logger.info("外网vCenter数据同步到PostgreSQL执行完成。耗时：%.1f 秒" % process_time)
 
 
 if __name__ == '__main__':

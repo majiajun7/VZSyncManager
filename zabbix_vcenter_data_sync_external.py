@@ -300,7 +300,7 @@ def main():
 
     end_time = time.time()
     process_time = end_time - start_time
-    logger.info("物理内网vCenter数据到PostgreSQL执行完成。耗时：%.1f 秒" % process_time)
+    logger.info("物理内网vCenter数据同步到PostgreSQL执行完成。耗时：%.1f 秒" % process_time)
 
 
 if __name__ == '__main__':
