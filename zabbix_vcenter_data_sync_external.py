@@ -223,6 +223,12 @@ class DataProcess:
     def __upsert_vms(self, records):
         for record in records:
             vc_name, vm_id, vm_uuid, vm_name, ipaddress, power_state, cpu_count, memory_size, host_name = record
+
+            if not cpu_count.isdigit():
+                cpu_count = 0
+            if not memory_size.isdigit():
+                memory_size = 0
+
             self.pgsql.execute(
                 'SELECT vm_uuid, vm_name, vm_ipaddress, vm_power_state, vm_cpu_count, "vm_memory_size_MiB", host_name FROM "vCenter_vm" WHERE vc_name=%s AND vm_id=%s',
                 (vc_name, vm_id))
