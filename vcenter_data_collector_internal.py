@@ -1,9 +1,7 @@
 #!/usr/bin/python3
 import json
 import urllib3
-import gzip
 import base64
-import zlib
 import lzma
 import concurrent.futures
 from vcenter_tools import Vcenter

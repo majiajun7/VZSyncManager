@@ -1,4 +1,3 @@
-import logging
 import json
 import time
 import psycopg2
@@ -68,12 +67,7 @@ class DataProcess:
     def __init__(self, data):
         self.conn = psycopg2.connect(f"host=10.20.120.239 dbname=script user=postgres password=^cA&PVp4rrR3Tvs^HPiQ")
         self.pgsql = self.conn.cursor()
-        self.data = []
-        for item in data:
-            if isinstance(item, list):
-                self.data.extend(item)
-            else:
-                self.data.append(item)
+        self.data = [element for item in data for element in item]
         # 获取当前处理的 vc_name 列表
         self.vc_names = set()
         for vcenter_data in self.data:
