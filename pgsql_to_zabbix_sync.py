@@ -68,7 +68,7 @@ def cleanup_unused_host_groups(zabbix_obj, pgsql):
             ip_address = match.group()
 
             # 检查数据库中是否有该物理机IP下的虚拟机
-            pgsql.execute("SELECT COUNT(*) FROM vCenter_vm WHERE host_name = %s", (ip_address,))
+            pgsql.execute('SELECT COUNT(*) FROM "vCenter_vm" WHERE host_name = \'%s\'', (ip_address,))
             vm_count = pgsql.fetchone()[0]
 
             if vm_count == 0:
