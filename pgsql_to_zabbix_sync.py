@@ -44,28 +44,42 @@ def get_macro(macros):
     return result_url, result_uuid
 
 
-def cleanup_unused_host_groups(zabbix_obj):
+def cleanup_unused_host_groups(zabbix_obj, pgsql):
     """
-    清理与宿主机相关且无主机的主机群组。
+    清理与宿主机相关且无虚拟机的主机群组。
     :param zabbix_obj: Zabbix API对象
+    :param pgsql: PostgreSQL数据库游标对象
     """
     # 获取所有主机群组
     host_groups = zabbix_obj.get_host_group_all()["result"]
+
+    # 正则表达式用于匹配IPv4地址
+    ip_pattern = r'((25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)'
 
     # 遍历所有群组，检查是否需要清理
     for group in host_groups:
         group_id = group['groupid']
         group_name = group['name']
 
-        # 假设宿主机群组的名称以 'HostGroup_' 开头（你可以根据实际情况修改正则表达式）
-        if re.match(r'((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})(\.((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})){3}', group_name):
-            # 获取该群组下的所有主机
-            hosts_in_group = zabbix_obj.get_hosts_by_group(group_id)
+        # 从群组名称中提取IP地址
+        match = re.search(ip_pattern, group_name)
+        if match:
+            # 提取匹配到的IP地址
+            ip_address = match.group()
 
-            # 如果该群组下没有主机，且名称符合条件，删除该群组
-            if not hosts_in_group["result"]:
-                # zabbix_obj.delete_host_group(group_id)
-                logger.info(f"删除无主机的宿主机群组: {group_name} (ID: {group_id})")
+            # 检查数据库中是否有该物理机IP下的虚拟机
+            pgsql.execute("SELECT COUNT(*) FROM vCenter_vm WHERE host_name = %s", (ip_address,))
+            vm_count = pgsql.fetchone()[0]
+
+            if vm_count == 0:
+                # 如果该物理机没有虚拟机，检查Zabbix中该群组下的主机
+                hosts_in_group = zabbix_obj.get_hosts_by_group(group_id)
+
+                # 如果该群组下没有主机，删除该群组
+                if not hosts_in_group["result"]:
+                    zabbix_obj.delete_host_group(group_id)
+                    logger.info(f"删除无主机且无虚拟机的宿主机群组: {group_name} (ID: {group_id})")
+
 
 
 def run():
