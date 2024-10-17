@@ -210,7 +210,7 @@ def run():
             zabbix_obj.create_host(host[2], host[3], area_gid_dict[host[0]], 10123, interface, host_macro, area_proxyid_dict[host[0]])
             logger.info('%s 宿主机创建成功' % host[3])
 
-    cleanup_unused_host_groups(zabbix_obj)
+    cleanup_unused_host_groups(zabbix_obj, pgsql)
 
     pgsql.close()
     conn.close()
