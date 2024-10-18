@@ -60,7 +60,7 @@ def cleanup_unused_host_groups(zabbix_obj, area_gid_dict):
     for group_id in area_gid_dict.values():
         group_hosts = zabbix_obj.get_hosts_by_group(group_id)["result"]
         for host in group_hosts:
-            match = re.search(ip_pattern, host['host'])
+            match = re.search(ip_pattern, host['name'])
             if match:
                 host_ips.add(match.group())
 
