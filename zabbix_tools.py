@@ -99,7 +99,7 @@ class Zabbix:
         response = requests.post(self.url, json.dumps(data), headers=self.header)
         return response.json()
 
-    def update_host(self, hostid, displayname=None, macro=None, group_list=None, name=None, interface=None,
+    def update_host(self, hostid, displayname=None, macros=None, group_list=None, name=None, interface=None,
                     proxy_hostid=None):
         data = {
             "jsonrpc": "2.0",
@@ -112,8 +112,8 @@ class Zabbix:
         }
         if displayname:
             data["params"]["name"] = displayname
-        if macro:
-            data["params"]["macros"] = macro
+        if macros:
+            data["params"]["macros"] = macros
         if group_list:
             data["params"]["groups"] = group_list
         if name:
