@@ -116,33 +116,32 @@ def run():
                 logger.warn('获取Zabbix主机组ID失败，跳过宿主机: %s' % host[3])
                 continue
 
+            # 更新Zabbix主机群组名称
+            if group_info["name"] != host_display_name:
+                zabbix_obj.update_host_group(group_id, host_display_name)
+                logger.info('主机群组重命名为 %s' % host_display_name)
+
             # 若宿主机名称不匹配，更新Zabbix中的名称及接口
             if not host[3] in zabbix_host["name"]:
                 interfaces = zabbix_host["interfaces"].copy()
                 interfaces[0]["ip"] = host[3]
                 zabbix_obj.update_host(zabbix_host["hostid"], name=host[2], displayname=host[3],
                                        interface=interfaces, proxy_hostid=area_proxyid_dict[host[0]])
-                host_display_name = host[3]
                 logger.info('Zabbix主机名称更新为 %s' % host[3])
-
-            # 更新Zabbix主机群组名称
-            if group_info["name"] != host_display_name:
-                zabbix_obj.update_host_group(group_id, host_display_name)
-                logger.info('主机群组重命名为 %s' % host_display_name)
 
             host_url, host_uuid = get_macro(zabbix_host["macros"])
             host_vc_url = \
                 pgsql.execute('SELECT vc_url FROM "vCenter_certficate" WHERE vc_name=\'%s\'' % host[0]).fetchall()[0][
                     0] + "/sdk"
 
-            # 更新Zabbix宏数据
+            # 如果宿主机被迁移至其他vCenter，更新Zabbix宏、所属主机组、proxyid数据
             if host_url != host_vc_url or host_uuid != host[2]:
                 host_macro = [{"macro": "{$VMWARE.URL}", "value": host_vc_url},
                               {"macro": "{$VMWARE.HV.UUID}", "value": host[2]}]
                 host_group_id = [group for group in zabbix_host["groups"] if
                                  group["groupid"] not in area_gid_dict.values()]
                 host_group_id.append({"groupid": area_gid_dict[host[0]]})
-                zabbix_obj.update_host(zabbix_host["hostid"], zabbix_host["name"], host_macro, host_group_id,
+                zabbix_obj.update_host(zabbix_host["hostid"], macros=host_macro, group_list=host_group_id,
                                        proxy_hostid=area_proxyid_dict[host[0]])
                 logger.info('更新宿主机信息')
 
