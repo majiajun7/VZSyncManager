@@ -44,17 +44,25 @@ def get_macro(macros):
     return result_url, result_uuid
 
 
-def cleanup_unused_host_groups(zabbix_obj, pgsql):
+def cleanup_unused_host_groups(zabbix_obj, area_gid_dict):
     """
     清理与宿主机相关且无虚拟机的主机群组。
     :param zabbix_obj: Zabbix API对象
-    :param pgsql: PostgreSQL数据库游标对象
     """
     # 获取所有主机群组
     host_groups = zabbix_obj.get_host_group_all()["result"]
 
     # 正则表达式用于匹配IPv4地址
     ip_pattern = r'((25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)'
+
+    # 获取所有主机，并提取 IP 地址
+    host_ips = set()
+    for group in area_gid_dict.values():
+        group_hosts = zabbix_obj.get_hosts_by_group(group["id"])["result"]
+        for host in group_hosts:
+            match = re.search(ip_pattern, host['host'])
+            if match:
+                host_ips.add(match.group())
 
     # 遍历所有群组，检查是否需要清理
     for group in host_groups:
@@ -67,19 +75,14 @@ def cleanup_unused_host_groups(zabbix_obj, pgsql):
             # 提取匹配到的IP地址
             ip_address = match.group()
 
-            # 检查数据库中是否有该物理机IP下的虚拟机
-            pgsql.execute('SELECT COUNT(*) FROM "vCenter_vm" WHERE host_name = %s', (ip_address,))
-            vm_count = pgsql.fetchone()[0]
-
-            if vm_count == 0:
-                # 如果该物理机没有虚拟机，检查Zabbix中该群组下的主机
+            if ip_address not in host_ips:
+                # 如果没有该监控主机，检查Zabbix中该群组下的主机
                 hosts_in_group = zabbix_obj.get_hosts_by_group(group_id)
 
                 # 如果该群组下没有主机，删除该群组
                 if not hosts_in_group["result"]:
                     zabbix_obj.delete_host_group(group_id)
-                    logger.info(f"删除无主机且无虚拟机的宿主机群组: {group_name} (ID: {group_id})")
-
+                    logger.info(f"删除无主机的宿主机群组: {group_name} (ID: {group_id})")
 
 
 def run():
@@ -125,14 +128,19 @@ def run():
                 logger.info('主机群组重命名为 %s' % zabbix_host['name'])
 
             host_url, host_uuid = get_macro(zabbix_host["macros"])
-            host_vc_url = pgsql.execute('SELECT vc_url FROM "vCenter_certficate" WHERE vc_name=\'%s\'' % host[0]).fetchall()[0][0] + "/sdk"
+            host_vc_url = \
+                pgsql.execute('SELECT vc_url FROM "vCenter_certficate" WHERE vc_name=\'%s\'' % host[0]).fetchall()[0][
+                    0] + "/sdk"
 
             # 更新Zabbix宏数据
             if host_url != host_vc_url or host_uuid != host[2]:
-                host_macro = [{"macro": "{$VMWARE.URL}", "value": host_vc_url}, {"macro": "{$VMWARE.HV.UUID}", "value": host[2]}]
-                host_group_id = [group for group in zabbix_host["groups"] if group["groupid"] not in area_gid_dict.values()]
+                host_macro = [{"macro": "{$VMWARE.URL}", "value": host_vc_url},
+                              {"macro": "{$VMWARE.HV.UUID}", "value": host[2]}]
+                host_group_id = [group for group in zabbix_host["groups"] if
+                                 group["groupid"] not in area_gid_dict.values()]
                 host_group_id.append({"groupid": area_gid_dict[host[0]]})
-                zabbix_obj.update_host(zabbix_host["hostid"], zabbix_host["name"], host_macro, host_group_id, proxy_hostid=area_proxyid_dict[host[0]])
+                zabbix_obj.update_host(zabbix_host["hostid"], zabbix_host["name"], host_macro, host_group_id,
+                                       proxy_hostid=area_proxyid_dict[host[0]])
                 logger.info('更新宿主机信息')
 
             # 处理宿主机下的虚拟机数据
@@ -204,13 +212,18 @@ def run():
         else:
             # 创建宿主机
             interface = [{"type": 1, "main": 1, "useip": 1, "ip": host[3], "dns": "", "port": "443"},
-                         {"type": 2, "main": 1, "useip": 1, "ip": host[3], "dns": "", "port": "161", "details": {"version": 2, "bulk": 1, "community": "{$SNMP_COMMUNITY}"}}]
-            host_vc_url = pgsql.execute('SELECT vc_url FROM "vCenter_certficate" WHERE vc_name=\'%s\'' % host[0]).fetchall()[0][0] + "/sdk"
-            host_macro = [{"macro": "{$VMWARE.URL}", "value": host_vc_url}, {"macro": "{$VMWARE.HV.UUID}", "value": host[2]}]
-            zabbix_obj.create_host(host[2], host[3], area_gid_dict[host[0]], 10123, interface, host_macro, area_proxyid_dict[host[0]])
+                         {"type": 2, "main": 1, "useip": 1, "ip": host[3], "dns": "", "port": "161",
+                          "details": {"version": 2, "bulk": 1, "community": "{$SNMP_COMMUNITY}"}}]
+            host_vc_url = \
+                pgsql.execute('SELECT vc_url FROM "vCenter_certficate" WHERE vc_name=\'%s\'' % host[0]).fetchall()[0][
+                    0] + "/sdk"
+            host_macro = [{"macro": "{$VMWARE.URL}", "value": host_vc_url},
+                          {"macro": "{$VMWARE.HV.UUID}", "value": host[2]}]
+            zabbix_obj.create_host(host[2], host[3], area_gid_dict[host[0]], 10123, interface, host_macro,
+                                   area_proxyid_dict[host[0]])
             logger.info('%s 宿主机创建成功' % host[3])
 
-    cleanup_unused_host_groups(zabbix_obj, pgsql)
+    cleanup_unused_host_groups(zabbix_obj, pgsql, area_gid_dict)
 
     pgsql.close()
     conn.close()
