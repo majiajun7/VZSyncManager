@@ -116,17 +116,13 @@ def run():
                 logger.warn('获取Zabbix主机组ID失败，跳过宿主机: %s' % host[3])
                 continue
 
-            # 更新Zabbix主机群组名称
-            if group_info["name"] != host_display_name:
-                zabbix_obj.update_host_group(group_id, host_display_name)
-                logger.info('主机群组重命名为 %s' % host_display_name)
-
             # 若宿主机名称不匹配，更新Zabbix中的名称及接口
             if not host[3] in zabbix_host["name"]:
                 interfaces = zabbix_host["interfaces"].copy()
                 interfaces[0]["ip"] = host[3]
                 zabbix_obj.update_host(zabbix_host["hostid"], name=host[2], displayname=host[3],
                                        interface=interfaces, proxy_hostid=area_proxyid_dict[host[0]])
+                host_display_name = host[2]
                 logger.info('Zabbix主机名称更新为 %s' % host[3])
 
             host_url, host_uuid = get_macro(zabbix_host["macros"])
@@ -144,6 +140,11 @@ def run():
                 zabbix_obj.update_host(zabbix_host["hostid"], macros=host_macro, group_list=host_group_id,
                                        proxy_hostid=area_proxyid_dict[host[0]])
                 logger.info('更新宿主机信息')
+
+            # 更新Zabbix主机群组名称
+            if group_info["name"] != host_display_name:
+                zabbix_obj.update_host_group(group_id, host_display_name)
+                logger.info('主机群组重命名为 %s' % host_display_name)
 
             # 处理宿主机下的虚拟机数据
             if host[0] not in {"IT中心云桌面VCenter", "IT中心测试区VCenter", "IT中心物理内网云桌面VCenter"}:
