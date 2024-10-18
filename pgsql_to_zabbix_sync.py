@@ -223,7 +223,7 @@ def run():
                                    area_proxyid_dict[host[0]])
             logger.info('%s 宿主机创建成功' % host[3])
 
-    cleanup_unused_host_groups(zabbix_obj, pgsql, area_gid_dict)
+    cleanup_unused_host_groups(zabbix_obj, area_gid_dict)
 
     pgsql.close()
     conn.close()
