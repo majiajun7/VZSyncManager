@@ -1,6 +1,7 @@
 import re
 import time
 import psycopg
+import pyzabbix
 from pyzabbix import ZabbixAPI
 from zabbix_tools import Zabbix
 from log_handler import get_logger
@@ -107,10 +108,12 @@ def run():
         zabbix_host = zabbix_obj.check_host_exist(host[2], host[3])
 
         if zabbix_host:
+            host_display_name = zabbix_host['name']
             group_id = get_host_group_id(host[3], zabbix_obj)
+            group_info = zapi.hostgroup.get(groupids=group_id)[0]
 
             if group_id is None:
-                print('获取Zabbix主机组ID失败，跳过宿主机: %s' % host[3])
+                logger.warn('获取Zabbix主机组ID失败，跳过宿主机: %s' % host[3])
                 continue
 
             # 若宿主机名称不匹配，更新Zabbix中的名称及接口
@@ -119,13 +122,13 @@ def run():
                 interfaces[0]["ip"] = host[3]
                 zabbix_obj.update_host(zabbix_host["hostid"], name=host[2], displayname=host[3],
                                        interface=interfaces, proxy_hostid=area_proxyid_dict[host[0]])
+                host_display_name = host[3]
                 logger.info('Zabbix主机名称更新为 %s' % host[3])
 
             # 更新Zabbix主机群组名称
-            group_info = zapi.hostgroup.get(groupids=group_id)[0]
-            if group_info["name"] != zabbix_host['name']:
-                zabbix_obj.update_host_group(group_id, host[3])
-                logger.info('主机群组重命名为 %s' % host[3])
+            if group_info["name"] != host_display_name:
+                zabbix_obj.update_host_group(group_id, host_display_name)
+                logger.info('主机群组重命名为 %s' % host_display_name)
 
             host_url, host_uuid = get_macro(zabbix_host["macros"])
             host_vc_url = \
