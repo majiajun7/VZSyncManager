@@ -124,8 +124,8 @@ def run():
             # 更新Zabbix主机群组名称
             group_info = zapi.hostgroup.get(groupids=group_id)[0]
             if group_info["name"] != zabbix_host['name']:
-                zabbix_obj.update_host_group(group_id, zabbix_host['name'])
-                logger.info('主机群组重命名为 %s' % zabbix_host['name'])
+                zabbix_obj.update_host_group(group_id, host[3])
+                logger.info('主机群组重命名为 %s' % host[3])
 
             host_url, host_uuid = get_macro(zabbix_host["macros"])
             host_vc_url = \
