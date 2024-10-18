@@ -122,7 +122,7 @@ def run():
                 interfaces[0]["ip"] = host[3]
                 zabbix_obj.update_host(zabbix_host["hostid"], name=host[2], displayname=host[3],
                                        interface=interfaces, proxy_hostid=area_proxyid_dict[host[0]])
-                host_display_name = host[2]
+                host_display_name = host[3]
                 logger.info('Zabbix主机名称更新为 %s' % host[3])
 
             host_url, host_uuid = get_macro(zabbix_host["macros"])
