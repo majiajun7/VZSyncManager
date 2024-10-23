@@ -154,6 +154,9 @@ def run():
                 for vm in vms:
                     zabbix_vm_host = zabbix_obj.check_vm_host_exist(vm[2])
 
+                    if vm[3].startswith('vCLS'):
+                        continue
+
                     if zabbix_vm_host:
                         vm_host_macro = None
                         vm_host_group = None
