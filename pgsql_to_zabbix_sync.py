@@ -97,10 +97,10 @@ def run():
 
     hosts = pgsql.execute('SELECT * FROM "vCenter_host" WHERE host_connection_state=\'CONNECTED\'').fetchall()
     area_gid_dict = {"IT中心管理VCenter": "238", "IT中心云桌面VCenter": "288", "IT中心DMZ区VCenter": "330",
-                     "IT中心产线区VCenter": "329", "IT中心研发域VCenter": "567", "IT中心测试区VCenter": "672",
+                     "IT中心研发域VCenter": "567", "IT中心测试区VCenter": "672",
                      "IT中心物理内网VCenter": "602", "IT中心物理内网云桌面VCenter": "873"}
     area_proxyid_dict = {"IT中心管理VCenter": "0", "IT中心云桌面VCenter": "0", "IT中心DMZ区VCenter": "0",
-                         "IT中心产线区VCenter": "0", "IT中心研发域VCenter": "22929", "IT中心测试区VCenter": "0",
+                         "IT中心研发域VCenter": "22929", "IT中心测试区VCenter": "0",
                          "IT中心物理内网VCenter": "25941", "IT中心物理内网云桌面VCenter": "25941"}
 
     for host in hosts:
