@@ -55,7 +55,7 @@ if __name__ == '__main__':
                         }
                     }
                 ]
-                zabbix_host_name = host['hostName'] + '-' + host['hostIp']
+                zabbix_host_name = '*' + host['hostName'] + '-' + host['hostIp'] + '*'
                 try:
                     search_host = zapi.host.get(
                         search={"host": zabbix_host_name},
