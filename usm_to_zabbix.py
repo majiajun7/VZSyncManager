@@ -6,6 +6,7 @@ import pyzabbix
 import send_message
 from log_handler import get_logger
 
+
 class Usm:
     def __init__(self):
         self.header = {"AccessToken": "40e8f7276c67dbf2b6857ac6c92510bf",
@@ -20,7 +21,6 @@ class Usm:
 
 class ExitException(Exception):
     pass
-
 
 
 if __name__ == '__main__':
@@ -57,14 +57,17 @@ if __name__ == '__main__':
                 ]
                 zabbix_host_name = host['hostName'] + '-' + host['hostIp']
                 try:
-                    search_host = zapi.host.get(filter={"host": [zabbix_host_name]})
+                    search_host = zapi.host.get(
+                        search={"host": zabbix_host_name},
+                        searchWildcardsEnabled=True)  # 启用通配符搜索
                 except Exception as e:
                     logger.error('交换机 %s 主机查找失败:%s' % (zabbix_host_name, e))
                     raise ExitException()
 
                 if not search_host:
                     try:
-                        zapi.host.create(host=zabbix_host_name, groups=[{"groupid": "5"}], templates={"templateid": 17271}, interfaces=interface)
+                        zapi.host.create(host=zabbix_host_name, groups=[{"groupid": "5"}],
+                                         templates={"templateid": 17271}, interfaces=interface)
                     except Exception as e:
                         logger.error('交换机 %s 主机创建失败:%s' % (zabbix_host_name, e))
                     else:
