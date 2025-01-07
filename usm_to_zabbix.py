@@ -1,10 +1,17 @@
 import time
-
+import re
 import requests
 import pyzabbix
 
 import send_message
 from log_handler import get_logger
+
+
+def sanitize_host_name(name):
+    """
+    清理主机名，替换所有非字母、数字、下划线和破折号的字符为下划线。
+    """
+    return re.sub(r'[^\w\-]', '_', name)
 
 
 class Usm:
@@ -39,7 +46,10 @@ if __name__ == '__main__':
             zapi = pyzabbix.ZabbixAPI("http://10.20.120.239")
             zapi.login(api_token='43024175e7f04e082d8a9bfae950505705b35bec7bd799ab1f53c0412e52b0f9')
             for host in metadata['hosts']:
-                # print(host['hostName'], host['hostIp'])
+                # 清理主机名中的特殊字符
+                sanitized_host_name = sanitize_host_name(host['hostName'])
+                zabbix_host_name = f"{sanitized_host_name}-{host['hostIp']}"
+
                 interface = [
                     {
                         "type": 2,
@@ -55,11 +65,8 @@ if __name__ == '__main__':
                         }
                     }
                 ]
-                zabbix_host_name = '*' + host['hostName'] + '-' + host['hostIp'] + '*'
                 try:
-                    search_host = zapi.host.get(
-                        search={"host": zabbix_host_name},
-                        searchWildcardsEnabled=True)  # 启用通配符搜索
+                    search_host = zapi.host.get(search={"host": zabbix_host_name})
                 except Exception as e:
                     logger.error('交换机 %s 主机查找失败:%s' % (zabbix_host_name, e))
                     raise ExitException()
