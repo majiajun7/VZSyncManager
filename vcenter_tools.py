@@ -78,6 +78,8 @@ class Vcenter:
             vm["ipaddress"] = ipaddress
             uuid = self.get_vm_uuid(vm["vm"])
             vm["uuid"] = uuid
+            annotation = self.get_vm_annotation(uuid)
+            vm["annotation"] = annotation
             if "cpu_count" not in vm:
                 vm["cpu_count"] = ""
             if "memory_size_MiB" not in vm:
@@ -104,6 +106,18 @@ class Vcenter:
         for HostSystem in self.hosts:
             if HostSystem.name == ipaddress:
                 return HostSystem.hardware.systemInfo.uuid
+
+    def get_vm_annotation(self, vm_uuid):
+        """
+        使用 PyVmomi 获取虚拟机的备注信息(annotation)。
+        :param vm_uuid: 虚拟机的 UUID
+        :return: 虚拟机备注信息（annotation），如果没有则返回空字符串。
+        """
+        for host in self.hosts:
+            for vm in host.vm:
+                if vm.summary.config.instanceUuid == vm_uuid:
+                    return vm.summary.config.annotation or ""
+        return ""
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.name})"
