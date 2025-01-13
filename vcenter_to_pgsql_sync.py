@@ -98,7 +98,7 @@ class DataProcess:
                   AND vm_cpu_count={vm["cpu_count"]}
                   AND "vm_memory_size_MiB"={vm["memory_size_MiB"]}
                   AND host_name='{host[1]}'
-                  AND vm_remark='{vm["remark"]}'
+                  AND vm_remark='{vm["annotation"]}'
                 ''').fetchall()
                 # print(exist)
                 if not exist:
@@ -116,7 +116,7 @@ class DataProcess:
                          {vm["cpu_count"]},
                          {vm["memory_size_MiB"]},
                         '{host[1]}',
-                        '{vm["remark"]}'
+                        '{vm["annotation"]}'
                     )
                     ''')
 
