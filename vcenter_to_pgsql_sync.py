@@ -127,7 +127,7 @@ class DataProcess:
             ''').fetchall()
             for data in old_data:
                 old_data_dict = {"memory_size_MiB": data[7], "vm": data[1], "name": data[3], "power_state": data[5],
-                                 "cpu_count": data[6], "ipaddress": data[4], "uuid": data[2]}
+                                 "cpu_count": data[6], "ipaddress": data[4], "uuid": data[2], "annotation": data[9]}
                 if old_data_dict not in vms:
                     self.pgsql.execute(f'''
                     DELETE FROM "vCenter_vm"
