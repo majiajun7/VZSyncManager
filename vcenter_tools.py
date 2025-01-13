@@ -1,8 +1,5 @@
-import re
 import urllib
 import urllib.parse
-# import requests  # 已不需要使用
-# import json      # 已不需要使用
 
 from pyVim import connect
 from pyVmomi import vim
