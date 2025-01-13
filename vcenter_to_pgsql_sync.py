@@ -82,7 +82,7 @@ class DataProcess:
     def __sync_virtual_machine(self):
         # 同步虚拟机数据
         host_tup = self.pgsql.execute(
-            f'SELECT host_id, host_name, host_connection_state FROM "vCenter_host" WHERE vc_name=\'{self.vcenter.name}\' AND host_connection_state=\'CONNECTED\'').fetchall()
+            f'SELECT host_id, host_name, host_connection_state FROM "vCenter_host" WHERE vc_name=\'{self.vcenter.name}\' AND host_connection_state=\'connected\'').fetchall()
         for host in host_tup:
             vms = self.vcenter.get_vm(host[0])
             # if not host[2] == "DISCONNECTED":  # 已与vCenter断开链接的主机不再添加虚拟机数据
