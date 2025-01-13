@@ -165,10 +165,12 @@ class DataProcess:
 
 
 def start_process(certificate):
-    vcenter_obj = Vcenter(certificate[1], certificate[2], certificate[3], certificate[0])
-    # print(vcenter_obj)
-    run = DataProcess(vcenter_obj)
-    run.start_sync()
+    try:
+        vcenter_obj = Vcenter(certificate[1], certificate[2], certificate[3], certificate[0])
+        run = DataProcess(vcenter_obj)
+        run.start_sync()
+    except Exception as e:
+        logger.error(f"处理 vCenter '{certificate[0]}' 时发生错误: {e}")
 
 
 def main():
