@@ -87,26 +87,69 @@ class DataProcess:
             vms = self.vcenter.get_vm(host[0])
             # if not host[2] == "DISCONNECTED":  # 已与vCenter断开链接的主机不再添加虚拟机数据
             for vm in vms:
-                # ipaddress = self.vcenter.get_vm_info(vm["vm"])
-                # ipaddress = None
-                exist = self.pgsql.execute(
-                    f'SELECT * FROM "vCenter_vm" WHERE vc_name=\'{self.vcenter.name}\' AND vm_id=\'{vm["vm"]}\' AND vm_uuid=\'{vm["uuid"]}\' AND vm_name=\'{vm["name"]}\' AND vm_ipaddress=\'{vm["ipaddress"]}\' AND vm_power_state=\'{vm["power_state"]}\' AND vm_cpu_count={vm["cpu_count"]} AND "vm_memory_size_MiB"={vm["memory_size_MiB"]} AND host_name=\'{host[1]}\'').fetchall()
+                exist = self.pgsql.execute(f'''
+                SELECT * FROM "vCenter_vm"
+                WHERE vc_name='{self.vcenter.name}'
+                  AND vm_id='{vm["vm"]}'
+                  AND vm_uuid='{vm["uuid"]}'
+                  AND vm_name='{vm["name"]}'
+                  AND vm_ipaddress='{vm["ipaddress"]}'
+                  AND vm_power_state='{vm["power_state"]}'
+                  AND vm_cpu_count={vm["cpu_count"]}
+                  AND "vm_memory_size_MiB"={vm["memory_size_MiB"]}
+                  AND host_name='{host[1]}'
+                  AND vm_remark='{vm["remark"]}'
+                ''').fetchall()
                 # print(exist)
                 if not exist:
-                    self.pgsql.execute(
-                        f'INSERT INTO "vCenter_vm" VALUES (\'{self.vcenter.name}\',\'{vm["vm"]}\',\'{vm["uuid"]}\',\'{vm["name"]}\',\'{vm["ipaddress"]}\',\'{vm["power_state"]}\',{vm["cpu_count"]},{vm["memory_size_MiB"]},\'{host[1]}\')')
+                    self.pgsql.execute(f'''
+                    INSERT INTO "vCenter_vm"
+                    (vc_name, vm_id, vm_uuid, vm_name, vm_ipaddress, vm_power_state, vm_cpu_count,
+                     "vm_memory_size_MiB", host_name, vm_remark)
+                    VALUES (
+                        '{self.vcenter.name}',
+                        '{vm["vm"]}',
+                        '{vm["uuid"]}',
+                        '{vm["name"]}',
+                        '{vm["ipaddress"]}',
+                        '{vm["power_state"]}',
+                         {vm["cpu_count"]},
+                         {vm["memory_size_MiB"]},
+                        '{host[1]}',
+                        '{vm["remark"]}'
+                    )
+                    ''')
 
-            # 删除vCenter已经不存在的数据
-            old_data = self.pgsql.execute(
-                f'SELECT * FROM "vCenter_vm" WHERE vc_name=\'{self.vcenter.name}\' AND host_name=\'{host[1]}\'').fetchall()
+            # 删除 vCenter 已经不存在的虚拟机数据，并归档
+            old_data = self.pgsql.execute( f'''
+            SELECT * FROM "vCenter_vm"
+            WHERE vc_name='{self.vcenter.name}' AND host_name='{host[1]}'
+            ''').fetchall()
             for data in old_data:
                 old_data_dict = {"memory_size_MiB": data[7], "vm": data[1], "name": data[3], "power_state": data[5],
                                  "cpu_count": data[6], "ipaddress": data[4], "uuid": data[2]}
                 if old_data_dict not in vms:
-                    self.pgsql.execute(
-                        f'DELETE FROM "vCenter_vm" WHERE vc_name=\'{self.vcenter.name}\' AND vm_id=\'{data[1]}\'')
-                    self.pgsql.execute(
-                        f'INSERT INTO "vCenter_vm_archive" VALUES (\'{self.vcenter.name}\',\'{data[1]}\',\'{data[2]}\',\'{data[3]}\',\'{data[4]}\',\'{data[5]}\',{data[6]},{data[7]},\'{host[1]}\')')
+                    self.pgsql.execute(f'''
+                    DELETE FROM "vCenter_vm"
+                    WHERE vc_name='{self.vcenter.name}' AND vm_id='{data[1]}'
+                    ''')
+                    self.pgsql.execute(f'''
+                    INSERT INTO "vCenter_vm_archive"
+                    (vc_name, vm_id, vm_uuid, vm_name, vm_ipaddress, vm_power_state,
+                     vm_cpu_count, "vm_memory_size_MiB", host_name, vm_remark)
+                    VALUES (
+                        '{self.vcenter.name}',
+                        '{data[1]}',
+                        '{data[2]}',
+                        '{data[3]}',
+                        '{data[4]}',
+                        '{data[5]}',
+                         {data[6]},
+                         {data[7]},
+                        '{host[1]}',
+                        '{data[8]}'
+                    )
+                    ''')
 
         # 删除宿主机已不存在的虚拟机数据
         old_vm = set(
