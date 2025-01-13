@@ -147,7 +147,7 @@ class DataProcess:
                          {data[6]},
                          {data[7]},
                         '{host[1]}',
-                        '{data[8]}'
+                        '{data[9]}'
                     )
                     ''')
 
