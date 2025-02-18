@@ -95,7 +95,7 @@ def run():
 
     zabbix_obj = Zabbix()
 
-    hosts = pgsql.execute('SELECT * FROM "vCenter_host" WHERE host_connection_state=\'CONNECTED\'').fetchall()
+    hosts = pgsql.execute('SELECT * FROM "vCenter_host" WHERE host_connection_state=\'connected\'').fetchall()
     area_gid_dict = {"IT中心管理VCenter": "238", "IT中心云桌面VCenter": "288", "IT中心DMZ区VCenter": "330",
                      "IT中心研发域VCenter": "567", "IT中心测试区VCenter": "672",
                      "IT中心物理内网VCenter": "602", "IT中心物理内网云桌面VCenter": "873"}
