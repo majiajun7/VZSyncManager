@@ -147,7 +147,7 @@ def run():
                 logger.info('主机群组重命名为 %s' % host_display_name)
 
             # 处理宿主机下的虚拟机数据
-            if host[0] not in {"IT中心云桌面VCenter", "IT中心测试区VCenter", "IT中心物理内网云桌面VCenter"}:
+            if host[0] not in {"IT中心云桌面VCenter", "IT中心测试区VCenter"}:
                 vms = pgsql.execute(
                     'SELECT * FROM "vCenter_vm" WHERE host_name=\'%s\' AND vc_name != \'IT中心云桌面VCenter\'' % host[
                         3]).fetchall()
