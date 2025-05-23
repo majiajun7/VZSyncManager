@@ -231,7 +231,7 @@ class DataProcess:
             if not exist:
                 # 插入新的虚拟机
                 self.pgsql.execute(
-                    'INSERT INTO "vCenter_vm" (vc_name, vm_id, vm_uuid, vm_name, vm_ipaddress, vm_power_state, vm_cpu_count, "vm_memory_size_MiB", host_name, vm_remark) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)',
+                    'INSERT INTO "vCenter_vm" (vc_name, vm_id, vm_uuid, vm_name, vm_ipaddress, vm_power_state, vm_cpu_count, "vm_memory_size_MiB", host_name, vm_remark) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)',
                     (vc_name, vm_id, vm_uuid, vm_name, ipaddress, power_state, cpu_count, memory_size, host_name, vm_remark))
             else:
                 # 更新虚拟机信息（如果有变化）
