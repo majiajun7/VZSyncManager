@@ -227,12 +227,24 @@ def run():
                         if host[0] == "IT中心物理内网云桌面VCenter":
                             current_templates = zabbix_vm_host.get('parentTemplates', [])
                             if not any(template.get('templateid') == "27097" for template in current_templates):
-                                # 使用 templates_add 参数只添加新模板，保留现有模板
-                                zapi.host.update(
-                                    hostid=zabbix_vm_host["hostid"],
-                                    templates_add=[{"templateid": "27097"}]
-                                )
-                                logger.info('为虚拟机 %s 关联模板27097' % vm[3])
+                                try:
+                                    # 方法1：使用 templates 参数，包含所有模板
+                                    template_ids = [{"templateid": template["templateid"]} for template in
+                                                    current_templates]
+                                    template_ids.append({"templateid": "27097"})
+
+                                    result = zapi.host.update(
+                                        hostid=zabbix_vm_host["hostid"],
+                                        templates=template_ids
+                                    )
+
+                                    if result:
+                                        logger.info('为虚拟机 %s 关联模板27097成功，结果: %s' % (vm[3], result))
+                                    else:
+                                        logger.error('为虚拟机 %s 关联模板27097失败' % vm[3])
+
+                                except Exception as e:
+                                    logger.error('为虚拟机 %s 关联模板27097时出错: %s' % (vm[3], str(e)))
 
                     else:
                         # 创建新的虚拟机主机
@@ -255,11 +267,17 @@ def run():
                             # 获取刚创建的主机信息
                             new_host = zabbix_obj.check_vm_host_exist(vm[2])
                             if new_host:
-                                zapi.host.update(
-                                    hostid=new_host["hostid"],
-                                    templates=[{"templateid": "10124"}, {"templateid": "27097"}]
-                                )
-                                logger.info('为虚拟机 %s 关联模板27097' % vm[3])
+                                try:
+                                    result = zapi.host.update(
+                                        hostid=new_host["hostid"],
+                                        templates=[{"templateid": "10124"}, {"templateid": "27097"}]
+                                    )
+                                    if result:
+                                        logger.info('为虚拟机 %s 关联模板27097成功' % vm[3])
+                                    else:
+                                        logger.error('为虚拟机 %s 关联模板27097失败' % vm[3])
+                                except Exception as e:
+                                    logger.error('为虚拟机 %s 关联模板时出错: %s' % (vm[3], str(e)))
                         else:
                             # 其他vCenter只添加到宿主机群组
                             zabbix_obj.create_host(vm[2], vm[3], group_id, 10124, interface, vm_host_macro,
