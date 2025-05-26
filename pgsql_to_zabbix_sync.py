@@ -231,7 +231,7 @@ def run():
                                     # 使用 template.massadd 方法来添加模板到主机
                                     result = zapi.template.massadd(
                                         templates=[{"templateid": "27097"}],
-                                        hosts=[{"hostid": zabbix_vm_host["hostid"]}]
+                                        hostids=[zabbix_vm_host["hostid"]]
                                     )
 
                                     if result:
@@ -267,7 +267,7 @@ def run():
                                     # 使用 template.massadd 来添加额外的模板
                                     result = zapi.template.massadd(
                                         templates=[{"templateid": "27097"}],
-                                        hosts=[{"hostid": new_host["hostid"]}]
+                                        hostids=[new_host["hostid"]]
                                     )
                                     if result:
                                         logger.info('为虚拟机 %s 关联模板27097成功' % vm[3])
