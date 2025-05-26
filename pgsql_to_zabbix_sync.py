@@ -171,10 +171,17 @@ def run():
                                              {"macro": "{$VMWARE.VM.UUID}", "value": vm[2]}]
 
                         vm_group_info = zabbix_vm_host['groups']
+                        need_group_update = False
+
+                        # 检查是否需要更新宿主机群组
+                        host_group_exists = False
                         for group in vm_group_info:
                             if host[3] in group['name']:
+                                host_group_exists = True
                                 break
-                        else:
+
+                        if not host_group_exists:
+                            need_group_update = True
                             remove_group_id = None
                             for group in vm_group_info:
                                 if '10.' in group['name'] or '192.' in group['name']:
@@ -185,14 +192,18 @@ def run():
                             if remove_group_id:
                                 vm_host_group.remove({"groupid": remove_group_id})
                             vm_host_group.append({"groupid": group_id})
+                        else:
+                            vm_host_group = [{"groupid": group["groupid"]} for group in zabbix_vm_host["groups"]]
 
-                            # 如果是IT中心物理内网云桌面VCenter，添加群组ID 1165
-                            if host[0] == "IT中心物理内网云桌面VCenter":
-                                # 检查是否已经包含群组ID 1165
+                        # 如果是IT中心物理内网云桌面VCenter，检查并添加群组ID 1165
+                        if host[0] == "IT中心物理内网云桌面VCenter":
+                            # 检查是否已经包含群组ID 1165
+                            if not any(group["groupid"] == "1165" for group in vm_group_info):
+                                need_group_update = True
                                 if not any(group["groupid"] == "1165" for group in vm_host_group):
                                     vm_host_group.append({"groupid": "1165"})
 
-                        if vm_host_macro or vm_host_group:
+                        if vm_host_macro or vm_host_group or need_group_update:
                             update_args = {
                                 "hostid": zabbix_vm_host["hostid"],
                                 "displayname": vm[3],
@@ -211,6 +222,7 @@ def run():
                             logger.info('更新 %s 虚拟机信息: %s' % (vm[3], ','.join(update_parts)))
 
                     else:
+                        # 创建新的虚拟机主机
                         interface = [{"type": 1, "main": 1, "useip": 1, "ip": vm[4], "dns": "", "port": "10050"}]
                         vm_vc_url = pgsql.execute(
                             'SELECT vc_url FROM "vCenter_certficate" WHERE vc_name=\'%s\'' % vm[0]).fetchall()[0][
@@ -225,6 +237,7 @@ def run():
                             zabbix_obj.create_host(vm[2], vm[3], group_list, 10124, interface, vm_host_macro,
                                                    area_proxyid_dict[host[0]])
                         else:
+                            # 其他vCenter只添加到宿主机群组
                             zabbix_obj.create_host(vm[2], vm[3], group_id, 10124, interface, vm_host_macro,
                                                    area_proxyid_dict[host[0]])
                         logger.info('虚拟机 %s 主机创建成功' % vm[3])
