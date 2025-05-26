@@ -228,14 +228,10 @@ def run():
                             current_templates = zabbix_vm_host.get('parentTemplates', [])
                             if not any(template.get('templateid') == "27097" for template in current_templates):
                                 try:
-                                    # 方法1：使用 templates 参数，包含所有模板
-                                    template_ids = [{"templateid": template["templateid"]} for template in
-                                                    current_templates]
-                                    template_ids.append({"templateid": "27097"})
-
-                                    result = zapi.host.update(
-                                        hostid=zabbix_vm_host["hostid"],
-                                        templates=template_ids
+                                    # 使用 template.massadd 方法来添加模板到主机
+                                    result = zapi.template.massadd(
+                                        templates=[{"templateid": "27097"}],
+                                        hosts=[{"hostid": zabbix_vm_host["hostid"]}]
                                     )
 
                                     if result:
@@ -268,9 +264,10 @@ def run():
                             new_host = zabbix_obj.check_vm_host_exist(vm[2])
                             if new_host:
                                 try:
-                                    result = zapi.host.update(
-                                        hostid=new_host["hostid"],
-                                        templates=[{"templateid": "10124"}, {"templateid": "27097"}]
+                                    # 使用 template.massadd 来添加额外的模板
+                                    result = zapi.template.massadd(
+                                        templates=[{"templateid": "27097"}],
+                                        hosts=[{"hostid": new_host["hostid"]}]
                                     )
                                     if result:
                                         logger.info('为虚拟机 %s 关联模板27097成功' % vm[3])
