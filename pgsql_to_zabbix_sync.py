@@ -227,13 +227,10 @@ def run():
                         if host[0] == "IT中心物理内网云桌面VCenter":
                             current_templates = zabbix_vm_host.get('parentTemplates', [])
                             if not any(template.get('templateid') == "27097" for template in current_templates):
-                                # 获取当前所有模板ID
-                                template_ids = [template["templateid"] for template in current_templates]
-                                template_ids.append("27097")
-                                # 使用 Zabbix API 直接更新主机的模板关联
+                                # 使用 templates_add 参数只添加新模板，保留现有模板
                                 zapi.host.update(
                                     hostid=zabbix_vm_host["hostid"],
-                                    templates=[{"templateid": tid} for tid in template_ids]
+                                    templates_add=[{"templateid": "27097"}]
                                 )
                                 logger.info('为虚拟机 %s 关联模板27097' % vm[3])
 
