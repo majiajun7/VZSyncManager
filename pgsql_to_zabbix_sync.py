@@ -234,7 +234,7 @@ def run():
                                     # 使用 template.massadd 方法添加模板，不会删除现有模板
                                     zapi.template.massadd(
                                         templates=[{"templateid": "27097"}],
-                                        hosts=[{"hostid": zabbix_vm_host["hostid"]}]
+                                        hostids=[zabbix_vm_host["hostid"]]
                                     )
                                     logger.info('为虚拟机 %s 添加模板27097成功' % vm[3])
                                 except Exception as e:
@@ -265,7 +265,7 @@ def run():
                                     # 使用 template.massadd 添加额外模板，不会删除默认模板10124
                                     zapi.template.massadd(
                                         templates=[{"templateid": "27097"}],
-                                        hosts=[{"hostid": host_id}]
+                                        hostids=[host_id]
                                     )
                                     logger.info('为虚拟机 %s 添加模板27097成功' % vm[3])
                             except Exception as e:
