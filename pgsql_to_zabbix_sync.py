@@ -231,10 +231,15 @@ def run():
                             if not any(template.get('templateid') == "27097" for template in current_templates):
                                 # 使用 zapi 直接调用 Zabbix API 添加模板
                                 try:
-                                    # 使用 host.massadd 方法添加模板到主机
-                                    zapi.host.massadd(
-                                        hosts=[{"hostid": zabbix_vm_host["hostid"]}],
-                                        templates=[{"templateid": "27097"}]
+                                    # 构建包含所有现有模板和新模板的列表
+                                    template_list = [{"templateid": template["templateid"]} for template in
+                                                     current_templates]
+                                    template_list.append({"templateid": "27097"})
+
+                                    # 使用 host.update 更新模板列表
+                                    zapi.host.update(
+                                        hostid=zabbix_vm_host["hostid"],
+                                        templates=template_list
                                     )
                                     logger.info('为虚拟机 %s 添加模板27097成功' % vm[3])
                                 except Exception as e:
@@ -262,12 +267,24 @@ def run():
                             try:
                                 if result and "result" in result and "hostids" in result["result"]:
                                     host_id = result["result"]["hostids"][0]
-                                    # 使用 host.massadd 添加额外模板，不会删除默认模板10124
-                                    zapi.host.massadd(
-                                        hosts=[{"hostid": host_id}],
-                                        templates=[{"templateid": "27097"}]
+                                    # 获取刚创建的主机信息，包括默认模板
+                                    new_host_info = zapi.host.get(
+                                        hostids=[host_id],
+                                        selectParentTemplates=["templateid"]
                                     )
-                                    logger.info('为虚拟机 %s 添加模板27097成功' % vm[3])
+                                    if new_host_info:
+                                        # 构建模板列表，包含现有模板和新模板
+                                        existing_templates = new_host_info[0].get('parentTemplates', [])
+                                        template_list = [{"templateid": t["templateid"]} for t in existing_templates]
+                                        # 添加新模板（如果还没有的话）
+                                        if not any(t["templateid"] == "27097" for t in existing_templates):
+                                            template_list.append({"templateid": "27097"})
+                                            # 更新主机模板
+                                            zapi.host.update(
+                                                hostid=host_id,
+                                                templates=template_list
+                                            )
+                                            logger.info('为虚拟机 %s 添加模板27097成功' % vm[3])
                             except Exception as e:
                                 logger.error('为虚拟机 %s 添加模板27097失败: %s' % (vm[3], str(e)))
                         else:
