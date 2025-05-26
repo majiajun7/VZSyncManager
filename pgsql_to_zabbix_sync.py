@@ -171,7 +171,6 @@ def run():
                                              {"macro": "{$VMWARE.VM.UUID}", "value": vm[2]}]
 
                         vm_group_info = zabbix_vm_host['groups']
-                        need_group_update = False
 
                         # 检查是否需要更新宿主机群组
                         host_group_exists = False
@@ -180,8 +179,10 @@ def run():
                                 host_group_exists = True
                                 break
 
+                        # 初始化 vm_host_group 为 None
+                        vm_host_group = None
+
                         if not host_group_exists:
-                            need_group_update = True
                             remove_group_id = None
                             for group in vm_group_info:
                                 if '10.' in group['name'] or '192.' in group['name']:
@@ -192,18 +193,19 @@ def run():
                             if remove_group_id:
                                 vm_host_group.remove({"groupid": remove_group_id})
                             vm_host_group.append({"groupid": group_id})
-                        else:
-                            vm_host_group = [{"groupid": group["groupid"]} for group in zabbix_vm_host["groups"]]
 
-                        # 如果是IT中心物理内网云桌面VCenter，检查并添加群组ID 1165
+                        # 如果是IT中心物理内网云桌面VCenter，检查是否需要添加群组ID 1165
                         if host[0] == "IT中心物理内网云桌面VCenter":
                             # 检查是否已经包含群组ID 1165
                             if not any(group["groupid"] == "1165" for group in vm_group_info):
-                                need_group_update = True
-                                if not any(group["groupid"] == "1165" for group in vm_host_group):
-                                    vm_host_group.append({"groupid": "1165"})
+                                # 如果之前没有创建 vm_host_group，现在创建
+                                if vm_host_group is None:
+                                    vm_host_group = [{"groupid": group["groupid"]} for group in
+                                                     zabbix_vm_host["groups"]]
+                                # 添加群组 1165
+                                vm_host_group.append({"groupid": "1165"})
 
-                        if vm_host_macro or vm_host_group or need_group_update:
+                        if vm_host_macro or vm_host_group:
                             update_args = {
                                 "hostid": zabbix_vm_host["hostid"],
                                 "displayname": vm[3],
