@@ -186,6 +186,12 @@ def run():
                                 vm_host_group.remove({"groupid": remove_group_id})
                             vm_host_group.append({"groupid": group_id})
 
+                            # 如果是IT中心物理内网云桌面VCenter，添加群组ID 1165
+                            if host[0] == "IT中心物理内网云桌面VCenter":
+                                # 检查是否已经包含群组ID 1165
+                                if not any(group["groupid"] == "1165" for group in vm_host_group):
+                                    vm_host_group.append({"groupid": "1165"})
+
                         if vm_host_macro or vm_host_group:
                             update_args = {
                                 "hostid": zabbix_vm_host["hostid"],
@@ -211,8 +217,16 @@ def run():
                                         0] + "/sdk"
                         vm_host_macro = [{"macro": "{$VMWARE.URL}", "value": vm_vc_url},
                                          {"macro": "{$VMWARE.VM.UUID}", "value": vm[2]}]
-                        zabbix_obj.create_host(vm[2], vm[3], group_id, 10124, interface, vm_host_macro,
-                                               area_proxyid_dict[host[0]])
+
+                        # 如果是IT中心物理内网云桌面VCenter，需要同时添加到两个群组
+                        if host[0] == "IT中心物理内网云桌面VCenter":
+                            # 创建包含两个群组的列表
+                            group_list = [{"groupid": group_id}, {"groupid": "1165"}]
+                            zabbix_obj.create_host(vm[2], vm[3], group_list, 10124, interface, vm_host_macro,
+                                                   area_proxyid_dict[host[0]])
+                        else:
+                            zabbix_obj.create_host(vm[2], vm[3], group_id, 10124, interface, vm_host_macro,
+                                                   area_proxyid_dict[host[0]])
                         logger.info('虚拟机 %s 主机创建成功' % vm[3])
 
         else:
