@@ -227,20 +227,15 @@ def run():
                         if host[0] == "IT中心物理内网云桌面VCenter":
                             current_templates = zabbix_vm_host.get('parentTemplates', [])
                             if not any(template.get('templateid') == "27097" for template in current_templates):
-                                try:
-                                    # 使用 template.massadd 方法来添加模板到主机
-                                    result = zapi.template.massadd(
-                                        templates=[{"templateid": "27097"}],
-                                        hostids=[zabbix_vm_host["hostid"]]
-                                    )
-
-                                    if result:
-                                        logger.info('为虚拟机 %s 关联模板27097成功，结果: %s' % (vm[3], result))
-                                    else:
-                                        logger.error('为虚拟机 %s 关联模板27097失败' % vm[3])
-
-                                except Exception as e:
-                                    logger.error('为虚拟机 %s 关联模板27097时出错: %s' % (vm[3], str(e)))
+                                # 获取当前所有模板ID
+                                template_ids = [template["templateid"] for template in current_templates]
+                                template_ids.append("27097")
+                                # 使用 zapi 直接调用 host.update 来更新模板
+                                zapi.host.update(
+                                    hostid=zabbix_vm_host["hostid"],
+                                    templates=[{"templateid": tid} for tid in template_ids]
+                                )
+                                logger.info('为虚拟机 %s 关联模板27097' % vm[3])
 
                     else:
                         # 创建新的虚拟机主机
@@ -255,26 +250,17 @@ def run():
                         if host[0] == "IT中心物理内网云桌面VCenter":
                             # 创建包含两个群组的列表
                             group_list = [{"groupid": group_id}, {"groupid": "1165"}]
-                            zabbix_obj.create_host(vm[2], vm[3], group_list, 10124, interface, vm_host_macro,
-                                                   area_proxyid_dict[host[0]])
-                            logger.info('虚拟机 %s 主机创建成功' % vm[3])
-
-                            # 创建主机后，使用 Zabbix API 关联额外的模板
-                            # 获取刚创建的主机信息
-                            new_host = zabbix_obj.check_vm_host_exist(vm[2])
-                            if new_host:
-                                try:
-                                    # 使用 template.massadd 来添加额外的模板
-                                    result = zapi.template.massadd(
-                                        templates=[{"templateid": "27097"}],
-                                        hostids=[new_host["hostid"]]
-                                    )
-                                    if result:
-                                        logger.info('为虚拟机 %s 关联模板27097成功' % vm[3])
-                                    else:
-                                        logger.error('为虚拟机 %s 关联模板27097失败' % vm[3])
-                                except Exception as e:
-                                    logger.error('为虚拟机 %s 关联模板时出错: %s' % (vm[3], str(e)))
+                            # 先创建主机
+                            result = zabbix_obj.create_host(vm[2], vm[3], group_list, 10124, interface, vm_host_macro,
+                                                            area_proxyid_dict[host[0]])
+                            # 获取新创建的主机ID并关联额外模板
+                            new_host_id = result["result"]["hostids"][0]
+                            # 使用 zapi 关联模板27097
+                            zapi.host.update(
+                                hostid=new_host_id,
+                                templates=[{"templateid": "10124"}, {"templateid": "27097"}]
+                            )
+                            logger.info('虚拟机 %s 主机创建成功并关联模板27097' % vm[3])
                         else:
                             # 其他vCenter只添加到宿主机群组
                             zabbix_obj.create_host(vm[2], vm[3], group_id, 10124, interface, vm_host_macro,
