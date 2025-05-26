@@ -160,6 +160,7 @@ def run():
                     if zabbix_vm_host:
                         vm_host_macro = None
                         vm_host_group = None
+                        vm_host_templates = None
 
                         vm_url, vm_uuid = get_macro(zabbix_vm_host["macros"])
                         vm_vc_url = pgsql.execute(
@@ -194,7 +195,7 @@ def run():
                                 vm_host_group.remove({"groupid": remove_group_id})
                             vm_host_group.append({"groupid": group_id})
 
-                        # 如果是IT中心物理内网云桌面VCenter，检查是否需要添加群组ID 1165
+                        # 如果是IT中心物理内网云桌面VCenter，检查是否需要添加群组ID 1165和模板27097
                         if host[0] == "IT中心物理内网云桌面VCenter":
                             # 检查是否已经包含群组ID 1165
                             if not any(group["groupid"] == "1165" for group in vm_group_info):
@@ -205,7 +206,15 @@ def run():
                                 # 添加群组 1165
                                 vm_host_group.append({"groupid": "1165"})
 
-                        if vm_host_macro or vm_host_group:
+                            # 检查是否已经包含模板ID 27097
+                            current_templates = zabbix_vm_host.get('parentTemplates', [])
+                            if not any(template.get('templateid') == "27097" for template in current_templates):
+                                # 创建模板列表，包含现有模板和新模板
+                                vm_host_templates = [{"templateid": template["templateid"]} for template in
+                                                     current_templates]
+                                vm_host_templates.append({"templateid": "27097"})
+
+                        if vm_host_macro or vm_host_group or vm_host_templates:
                             update_args = {
                                 "hostid": zabbix_vm_host["hostid"],
                                 "displayname": vm[3],
@@ -214,6 +223,8 @@ def run():
                                 update_args["macros"] = vm_host_macro
                             if vm_host_group:
                                 update_args["group_list"] = vm_host_group
+                            if vm_host_templates:
+                                update_args["templates"] = vm_host_templates
                             zabbix_obj.update_host(**update_args)
 
                             update_parts = []
@@ -221,6 +232,8 @@ def run():
                                 update_parts.append("宏")
                             if vm_host_group:
                                 update_parts.append("群组")
+                            if vm_host_templates:
+                                update_parts.append("模板")
                             logger.info('更新 %s 虚拟机信息: %s' % (vm[3], ','.join(update_parts)))
 
                     else:
@@ -232,11 +245,13 @@ def run():
                         vm_host_macro = [{"macro": "{$VMWARE.URL}", "value": vm_vc_url},
                                          {"macro": "{$VMWARE.VM.UUID}", "value": vm[2]}]
 
-                        # 如果是IT中心物理内网云桌面VCenter，需要同时添加到两个群组
+                        # 如果是IT中心物理内网云桌面VCenter，需要同时添加到两个群组并关联额外模板
                         if host[0] == "IT中心物理内网云桌面VCenter":
                             # 创建包含两个群组的列表
                             group_list = [{"groupid": group_id}, {"groupid": "1165"}]
-                            zabbix_obj.create_host(vm[2], vm[3], group_list, 10124, interface, vm_host_macro,
+                            # 创建模板列表，包含默认模板10124和额外模板27097
+                            template_list = [{"templateid": "10124"}, {"templateid": "27097"}]
+                            zabbix_obj.create_host(vm[2], vm[3], group_list, template_list, interface, vm_host_macro,
                                                    area_proxyid_dict[host[0]])
                         else:
                             # 其他vCenter只添加到宿主机群组
