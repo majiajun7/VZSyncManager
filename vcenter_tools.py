@@ -134,6 +134,10 @@ class Vcenter:
 
         # 遍历该宿主机下所有 vm
         for vm in the_host.vm:
+            # 跳过模板类型的虚拟机
+            if vm.summary.config.template:
+                continue
+                
             power_state = str(vm.runtime.powerState) if vm.runtime.powerState else ""
 
             # 虚拟机 CPU / 内存等信息
