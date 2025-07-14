@@ -66,11 +66,7 @@ class Zabbix:
             "params": {
                 "host": name,
                 "name": displayname,
-                "groups": [
-                    {
-                        "groupid": group_id
-                    }
-                ],
+                "groups": group_id if isinstance(group_id, list) else [{"groupid": group_id}],
                 "proxy_hostid": proxy_hostid
             },
             "auth": self.session,
@@ -83,8 +79,15 @@ class Zabbix:
         if template_id:
             data["params"]["templates"] = [{"templateid": template_id}]
         response = requests.post(self.url, json.dumps(data), headers=self.header)
-
-    # print(response.text)
+        result = response.json()
+        
+        # 调试输出
+        if "error" in result:
+            print(f"创建主机失败: {result['error']}")
+        else:
+            print(f"创建主机响应: {result}")
+            
+        return result
 
     def create_host_group(self, name):
         data = {
