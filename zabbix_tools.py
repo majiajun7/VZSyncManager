@@ -80,13 +80,6 @@ class Zabbix:
             data["params"]["templates"] = [{"templateid": template_id}]
         response = requests.post(self.url, json.dumps(data), headers=self.header)
         result = response.json()
-        
-        # 调试输出
-        if "error" in result:
-            print(f"创建主机失败: {result['error']}")
-        else:
-            print(f"创建主机响应: {result}")
-            
         return result
 
     def create_host_group(self, name):

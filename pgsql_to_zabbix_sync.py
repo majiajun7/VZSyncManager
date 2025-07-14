@@ -272,7 +272,17 @@ def run():
                             # 先创建主机
                             result = zabbix_obj.create_host(vm[2], vm[3], group_list, 10124, interface, vm_host_macro,
                                                             area_proxyid_dict[host[0]])
-                            logger.info('虚拟机 %s 主机创建成功' % vm[3])
+                            
+                            # 根据实际结果记录日志
+                            if result and "result" in result and "hostids" in result["result"]:
+                                logger.info('虚拟机 %s 主机创建成功' % vm[3])
+                            elif result and "error" in result:
+                                if "already exists" in result["error"]["data"]:
+                                    logger.info('虚拟机 %s 主机已存在，跳过创建' % vm[3])
+                                else:
+                                    logger.error('虚拟机 %s 主机创建失败: %s' % (vm[3], result["error"]["message"]))
+                            else:
+                                logger.error('虚拟机 %s 主机创建失败: 未知错误' % vm[3])
 
                             # 创建成功后，添加额外的模板27097
                             try:
@@ -306,9 +316,19 @@ def run():
                                 logger.error('为虚拟机 %s 添加模板27097失败: %s' % (vm[3], str(e)))
                         else:
                             # 其他vCenter只添加到宿主机群组
-                            zabbix_obj.create_host(vm[2], vm[3], group_id, 10124, interface, vm_host_macro,
+                            result = zabbix_obj.create_host(vm[2], vm[3], group_id, 10124, interface, vm_host_macro,
                                                    area_proxyid_dict[host[0]])
-                            logger.info('虚拟机 %s 主机创建成功' % vm[3])
+                            
+                            # 根据实际结果记录日志
+                            if result and "result" in result and "hostids" in result["result"]:
+                                logger.info('虚拟机 %s 主机创建成功' % vm[3])
+                            elif result and "error" in result:
+                                if "already exists" in result["error"]["data"]:
+                                    logger.info('虚拟机 %s 主机已存在，跳过创建' % vm[3])
+                                else:
+                                    logger.error('虚拟机 %s 主机创建失败: %s' % (vm[3], result["error"]["message"]))
+                            else:
+                                logger.error('虚拟机 %s 主机创建失败: 未知错误' % vm[3])
 
         else:
             # 创建宿主机
@@ -320,9 +340,19 @@ def run():
                     0] + "/sdk"
             host_macro = [{"macro": "{$VMWARE.URL}", "value": host_vc_url},
                           {"macro": "{$VMWARE.HV.UUID}", "value": host[2]}]
-            zabbix_obj.create_host(host[2], host[3], area_gid_dict[host[0]], 10123, interface, host_macro,
+            result = zabbix_obj.create_host(host[2], host[3], area_gid_dict[host[0]], 10123, interface, host_macro,
                                    area_proxyid_dict[host[0]])
-            logger.info('%s 宿主机创建成功' % host[3])
+            
+            # 根据实际结果记录日志
+            if result and "result" in result and "hostids" in result["result"]:
+                logger.info('%s 宿主机创建成功' % host[3])
+            elif result and "error" in result:
+                if "already exists" in result["error"]["data"]:
+                    logger.info('%s 宿主机已存在，跳过创建' % host[3])
+                else:
+                    logger.error('%s 宿主机创建失败: %s' % (host[3], result["error"]["message"]))
+            else:
+                logger.error('%s 宿主机创建失败: 未知错误' % host[3])
 
     cleanup_unused_host_groups(zabbix_obj, area_gid_dict)
 
