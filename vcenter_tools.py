@@ -103,6 +103,45 @@ class Vcenter:
                 })
         return results
 
+    def _get_custom_attributes(self, vm):
+        """
+        获取虚拟机的自定义属性
+        返回字典，包含 CMDB_ID、VM_Owner、Department
+        """
+        custom_attrs = {
+            "cmdb_id": "",
+            "vm_owner": "",
+            "department": ""
+        }
+        
+        try:
+            # 获取自定义字段管理器
+            cfm = self.content.customFieldsManager
+            
+            # 构建自定义字段名称到键的映射
+            field_map = {}
+            for field in cfm.field:
+                field_map[field.name] = field.key
+            
+            # 获取虚拟机的自定义字段值
+            if hasattr(vm, 'customValue') and vm.customValue:
+                for custom_value in vm.customValue:
+                    # 根据键找到对应的字段名
+                    for field in cfm.field:
+                        if field.key == custom_value.key:
+                            if field.name == 'CMDB_ID':
+                                custom_attrs['cmdb_id'] = str(custom_value.value) if custom_value.value else ""
+                            elif field.name == 'VM_Owner':
+                                custom_attrs['vm_owner'] = str(custom_value.value) if custom_value.value else ""
+                            elif field.name == 'Department':
+                                custom_attrs['department'] = str(custom_value.value) if custom_value.value else ""
+                            break
+        except Exception as e:
+            # 如果获取自定义属性失败，返回空值
+            pass
+        
+        return custom_attrs
+
     def get_vm(self, host_id) -> list:
         """
         根据给定的 host_id (即 host._moId)，获取该宿主机下的所有虚拟机信息。
@@ -116,7 +155,10 @@ class Vcenter:
                 "memory_size_MiB": 4096,
                 "uuid": "vm-uuid",
                 "ipaddress": "x.x.x.x",
-                "annotation": "备注信息"
+                "annotation": "备注信息",
+                "cmdb_id": "资产编号",
+                "vm_owner": "资源使用人",
+                "department": "使用人部门"
             },
             ...
         ]
@@ -143,6 +185,9 @@ class Vcenter:
             # 虚拟机 CPU / 内存等信息
             cpu_count = vm.summary.config.numCpu if vm.summary.config.numCpu else 0
             memory_size = vm.summary.config.memorySizeMB if vm.summary.config.memorySizeMB else 0
+            
+            # 获取自定义属性
+            custom_attrs = self._get_custom_attributes(vm)
 
             results.append({
                 "vm": vm._moId,
@@ -154,7 +199,11 @@ class Vcenter:
                 # 获取 IP 地址
                 "ipaddress": vm.guest.ipAddress if vm.guest.ipAddress else "0.0.0.0",
                 # 获取备注信息
-                "annotation": vm.summary.config.annotation or ""
+                "annotation": vm.summary.config.annotation or "",
+                # 添加自定义属性
+                "cmdb_id": custom_attrs["cmdb_id"],
+                "vm_owner": custom_attrs["vm_owner"],
+                "department": custom_attrs["department"]
             })
         return results
 

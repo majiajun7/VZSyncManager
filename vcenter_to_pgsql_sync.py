@@ -99,13 +99,16 @@ class DataProcess:
                   AND "vm_memory_size_MiB"={vm["memory_size_MiB"]}
                   AND host_name='{host[1]}'
                   AND vm_remark='{vm["annotation"]}'
+                  AND cmdb_id='{vm["cmdb_id"]}'
+                  AND vm_owner='{vm["vm_owner"]}'
+                  AND department='{vm["department"]}'
                 ''').fetchall()
                 # print(exist)
                 if not exist:
                     self.pgsql.execute(f'''
                     INSERT INTO "vCenter_vm"
                     (vc_name, vm_id, vm_uuid, vm_name, vm_ipaddress, vm_power_state, vm_cpu_count,
-                     "vm_memory_size_MiB", host_name, vm_remark)
+                     "vm_memory_size_MiB", host_name, vm_remark, cmdb_id, vm_owner, department)
                     VALUES (
                         '{self.vcenter.name}',
                         '{vm["vm"]}',
@@ -116,7 +119,10 @@ class DataProcess:
                          {vm["cpu_count"]},
                          {vm["memory_size_MiB"]},
                         '{host[1]}',
-                        '{vm["annotation"]}'
+                        '{vm["annotation"]}',
+                        '{vm["cmdb_id"]}',
+                        '{vm["vm_owner"]}',
+                        '{vm["department"]}'
                     )
                     ''')
 
@@ -127,7 +133,10 @@ class DataProcess:
             ''').fetchall()
             for data in old_data:
                 old_data_dict = {"memory_size_MiB": data[7], "vm": data[1], "name": data[3], "power_state": data[5],
-                                 "cpu_count": data[6], "ipaddress": data[4], "uuid": data[2], "annotation": data[9]}
+                                 "cpu_count": data[6], "ipaddress": data[4], "uuid": data[2], "annotation": data[9],
+                                 "cmdb_id": data[10] if len(data) > 10 else "", 
+                                 "vm_owner": data[11] if len(data) > 11 else "",
+                                 "department": data[12] if len(data) > 12 else ""}
                 if old_data_dict not in vms:
                     self.pgsql.execute(f'''
                     DELETE FROM "vCenter_vm"
@@ -136,7 +145,7 @@ class DataProcess:
                     self.pgsql.execute(f'''
                     INSERT INTO "vCenter_vm_archive"
                     (vc_name, vm_id, vm_uuid, vm_name, vm_ipaddress, vm_power_state,
-                     vm_cpu_count, "vm_memory_size_MiB", host_name, vm_remark)
+                     vm_cpu_count, "vm_memory_size_MiB", host_name, vm_remark, cmdb_id, vm_owner, department)
                     VALUES (
                         '{self.vcenter.name}',
                         '{data[1]}',
@@ -147,7 +156,10 @@ class DataProcess:
                          {data[6]},
                          {data[7]},
                         '{host[1]}',
-                        '{data[9]}'
+                        '{data[9]}',
+                        '{data[10] if len(data) > 10 else ""}',
+                        '{data[11] if len(data) > 11 else ""}',
+                        '{data[12] if len(data) > 12 else ""}'
                     )
                     ''')
 
