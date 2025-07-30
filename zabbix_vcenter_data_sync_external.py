@@ -210,14 +210,17 @@ class DataProcess:
                     vm["cpu_count"],
                     vm["memory_size_MiB"],
                     vm["host_name"],
-                    vm["annotation"]
+                    vm["annotation"],
+                    vm.get("cmdb_id", ""),
+                    vm.get("vm_owner", ""),
+                    vm.get("department", "")
                 ))
         # 批量插入或更新虚拟机
         self.__upsert_vms(vm_records)
 
     def __upsert_vms(self, records):
         for record in records:
-            vc_name, vm_id, vm_uuid, vm_name, ipaddress, power_state, cpu_count, memory_size, host_name, vm_remark = record
+            vc_name, vm_id, vm_uuid, vm_name, ipaddress, power_state, cpu_count, memory_size, host_name, vm_remark, cmdb_id, vm_owner, department = record
 
             if not cpu_count:
                 cpu_count = 0
@@ -225,21 +228,23 @@ class DataProcess:
                 memory_size = 0
 
             self.pgsql.execute(
-                'SELECT vm_uuid, vm_name, vm_ipaddress, vm_power_state, vm_cpu_count, "vm_memory_size_MiB", host_name, vm_remark FROM "vCenter_vm" WHERE vc_name=%s AND vm_id=%s',
+                'SELECT vm_uuid, vm_name, vm_ipaddress, vm_power_state, vm_cpu_count, "vm_memory_size_MiB", host_name, vm_remark, cmdb_id, vm_owner, department FROM "vCenter_vm" WHERE vc_name=%s AND vm_id=%s',
                 (vc_name, vm_id))
             exist = self.pgsql.fetchone()
             if not exist:
                 # 插入新的虚拟机
                 self.pgsql.execute(
-                    'INSERT INTO "vCenter_vm" (vc_name, vm_id, vm_uuid, vm_name, vm_ipaddress, vm_power_state, vm_cpu_count, "vm_memory_size_MiB", host_name, vm_remark) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)',
-                    (vc_name, vm_id, vm_uuid, vm_name, ipaddress, power_state, cpu_count, memory_size, host_name, vm_remark))
+                    'INSERT INTO "vCenter_vm" (vc_name, vm_id, vm_uuid, vm_name, vm_ipaddress, vm_power_state, vm_cpu_count, "vm_memory_size_MiB", host_name, vm_remark, cmdb_id, vm_owner, department) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)',
+                    (vc_name, vm_id, vm_uuid, vm_name, ipaddress, power_state, cpu_count, memory_size, host_name, vm_remark, cmdb_id, vm_owner, department))
             else:
                 # 更新虚拟机信息（如果有变化）
                 if (exist[0] != vm_uuid or exist[1] != vm_name or exist[2] != ipaddress or exist[3] != power_state or
-                        exist[4] != cpu_count or exist[5] != memory_size or exist[6] != host_name or exist[7] != vm_remark):
+                        exist[4] != cpu_count or exist[5] != memory_size or exist[6] != host_name or exist[7] != vm_remark or
+                        (len(exist) > 8 and exist[8] != cmdb_id) or (len(exist) > 9 and exist[9] != vm_owner) or 
+                        (len(exist) > 10 and exist[10] != department)):
                     self.pgsql.execute(
-                        'UPDATE "vCenter_vm" SET vm_uuid=%s, vm_name=%s, vm_ipaddress=%s, vm_power_state=%s, vm_cpu_count=%s, "vm_memory_size_MiB"=%s, host_name=%s, vm_remark=%s WHERE vc_name=%s AND vm_id=%s',
-                        (vm_uuid, vm_name, ipaddress, power_state, cpu_count, memory_size, host_name, vm_remark, vc_name, vm_id))
+                        'UPDATE "vCenter_vm" SET vm_uuid=%s, vm_name=%s, vm_ipaddress=%s, vm_power_state=%s, vm_cpu_count=%s, "vm_memory_size_MiB"=%s, host_name=%s, vm_remark=%s, cmdb_id=%s, vm_owner=%s, department=%s WHERE vc_name=%s AND vm_id=%s',
+                        (vm_uuid, vm_name, ipaddress, power_state, cpu_count, memory_size, host_name, vm_remark, cmdb_id, vm_owner, department, vc_name, vm_id))
         # 删除已不存在的虚拟机
         self.__cleanup_vms(records)
 
@@ -248,7 +253,7 @@ class DataProcess:
         # 只查询当前 vc_name 下的数据
         for vc_name in self.vc_names:
             self.pgsql.execute(
-                'SELECT vc_name, vm_id, vm_uuid, vm_name, vm_ipaddress, vm_power_state, vm_cpu_count, "vm_memory_size_MiB", host_name, vm_remark FROM "vCenter_vm" WHERE vc_name=%s',
+                'SELECT vc_name, vm_id, vm_uuid, vm_name, vm_ipaddress, vm_power_state, vm_cpu_count, "vm_memory_size_MiB", host_name, vm_remark, cmdb_id, vm_owner, department FROM "vCenter_vm" WHERE vc_name=%s',
                 (vc_name,))
             all_records = self.pgsql.fetchall()
             for record in all_records:
@@ -258,9 +263,9 @@ class DataProcess:
                         'DELETE FROM "vCenter_vm" WHERE vc_name=%s AND vm_id=%s',
                         (record[0], record[1]))
                     self.pgsql.execute(
-                        'INSERT INTO "vCenter_vm_archive" (vc_name, vm_id, vm_uuid, vm_name, vm_ipaddress, vm_power_state, vm_cpu_count, "vm_memory_size_MiB", host_name, vm_remark) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)',
+                        'INSERT INTO "vCenter_vm_archive" (vc_name, vm_id, vm_uuid, vm_name, vm_ipaddress, vm_power_state, vm_cpu_count, "vm_memory_size_MiB", host_name, vm_remark, cmdb_id, vm_owner, department) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)',
                         (record[0], record[1], record[2], record[3], record[4], record[5], record[6], record[7],
-                         record[8], record[9]))
+                         record[8], record[9], record[10] if len(record) > 10 else '', record[11] if len(record) > 11 else '', record[12] if len(record) > 12 else ''))
 
     def __del__(self):
         self.conn.commit()
