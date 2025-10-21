@@ -54,8 +54,7 @@ class Zabbix:
     def check_vm_host_exist(self, uuid):
         for host in self.metadata["result"]:
             for macro in host["macros"]:
-                # 安全检查：确保macro有value键
-                if "value" in macro and macro["value"] == uuid:  # 检测zabbix中主机是否存在的逻辑：遍历所有主机，匹配宏内是否存在虚拟机UUID
+                if macro["value"] == uuid:  # 检测zabbix中主机是否存在的逻辑：遍历所有主机，匹配宏内是否存在虚拟机UUID
                     return host
 
         return False
