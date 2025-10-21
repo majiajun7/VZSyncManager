@@ -182,7 +182,11 @@ class Vcenter:
             # 跳过模板类型的虚拟机
             if vm.summary.config.template:
                 continue
-                
+
+            # 跳过vCLS虚拟机（vSphere Cluster Services内部虚拟机）
+            if vm.name and vm.name.startswith('vCLS'):
+                continue
+
             power_state = str(vm.runtime.powerState) if vm.runtime.powerState else ""
 
             # 虚拟机 CPU / 内存等信息
