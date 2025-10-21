@@ -147,15 +147,45 @@ def run():
                 logger.info('主机群组重命名为 %s' % host_display_name)
 
             # 处理宿主机下的虚拟机数据
-            if host[0] not in {"IT中心云桌面VCenter", "IT中心测试区VCenter"}:
+            # IT中心云桌面VCenter不同步虚拟机
+            # IT中心测试区VCenter条件同步：ad_user、cmdb_id、department、vm_owner四个字段任意一个有值就同步
+            if host[0] == "IT中心云桌面VCenter":
+                # IT中心云桌面VCenter跳过虚拟机同步
+                continue
+            elif host[0] == "IT中心测试区VCenter":
+                # IT中心测试区VCenter需要条件过滤
                 vms = pgsql.execute(
-                    'SELECT * FROM "vCenter_vm" WHERE host_name=\'%s\' AND vc_name != \'IT中心云桌面VCenter\'' % host[
-                        3]).fetchall()
-                for vm in vms:
+                    'SELECT * FROM "vCenter_vm" WHERE host_name=\'%s\' AND vc_name = \'IT中心测试区VCenter\'' % host[3]
+                ).fetchall()
+            else:
+                # 其他VCenter正常同步，排除IT中心云桌面VCenter的虚拟机
+                vms = pgsql.execute(
+                    'SELECT * FROM "vCenter_vm" WHERE host_name=\'%s\' AND vc_name != \'IT中心云桌面VCenter\'' % host[3]
+                ).fetchall()
+
+            for vm in vms:
                     zabbix_vm_host = zabbix_obj.check_vm_host_exist(vm[2])
 
                     if vm[3].startswith('vCLS'):
                         continue
+
+                    # IT中心测试区VCenter的虚拟机需要满足条件才同步
+                    # 条件：ad_user、cmdb_id、department、vm_owner四个字段任意一个有值
+                    if host[0] == "IT中心测试区VCenter":
+                        # 获取四个自定义属性字段的值
+                        cmdb_id = vm[10] if len(vm) > 10 else ""
+                        vm_owner = vm[11] if len(vm) > 11 else ""
+                        department = vm[12] if len(vm) > 12 else ""
+                        ad_user = vm[13] if len(vm) > 13 else ""
+
+                        # 检查四个字段是否都为空
+                        if not any([cmdb_id and str(cmdb_id).strip(),
+                                   vm_owner and str(vm_owner).strip(),
+                                   department and str(department).strip(),
+                                   ad_user and str(ad_user).strip()]):
+                            # 所有字段都为空，跳过该虚拟机
+                            logger.debug('虚拟机 %s 的自定义属性字段都为空，跳过同步' % vm[3])
+                            continue
 
                     if zabbix_vm_host:
                         vm_host_macro = None

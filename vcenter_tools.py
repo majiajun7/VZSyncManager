@@ -106,12 +106,13 @@ class Vcenter:
     def _get_custom_attributes(self, vm):
         """
         获取虚拟机的自定义属性
-        返回字典，包含 CMDB_ID、VM_Owner、Department
+        返回字典，包含 CMDB_ID、VM_Owner、Department、AD_User
         """
         custom_attrs = {
             "cmdb_id": "",
             "vm_owner": "",
-            "department": ""
+            "department": "",
+            "ad_user": ""
         }
         
         try:
@@ -135,6 +136,8 @@ class Vcenter:
                                 custom_attrs['vm_owner'] = str(custom_value.value) if custom_value.value else ""
                             elif field.name == 'Department':
                                 custom_attrs['department'] = str(custom_value.value) if custom_value.value else ""
+                            elif field.name == 'AD_User':
+                                custom_attrs['ad_user'] = str(custom_value.value) if custom_value.value else ""
                             break
         except Exception as e:
             # 如果获取自定义属性失败，返回空值
@@ -203,7 +206,8 @@ class Vcenter:
                 # 添加自定义属性
                 "cmdb_id": custom_attrs["cmdb_id"],
                 "vm_owner": custom_attrs["vm_owner"],
-                "department": custom_attrs["department"]
+                "department": custom_attrs["department"],
+                "ad_user": custom_attrs["ad_user"]
             })
         return results
 
