@@ -2,6 +2,9 @@ import json
 import re
 
 import requests
+from log_handler import get_logger
+
+logger = get_logger(__name__)
 
 
 class Zabbix:
@@ -41,6 +44,10 @@ class Zabbix:
         for host in self.metadata["result"]:
             # 遍历所有主机，匹配宏内是否存在虚拟机UUID
             for macro in host["macros"]:
+                # 安全检查：确保macro字典包含value键
+                if "value" not in macro:
+                    logger.warning(f"主机 '{host.get('name', 'unknown')}' 的宏缺少value键: {macro}")
+                    continue
                 if macro["value"] == uuid:
                     return host
             # 检查宿主机IP是否存在于zabbix的主机可见名称中
@@ -54,6 +61,10 @@ class Zabbix:
     def check_vm_host_exist(self, uuid):
         for host in self.metadata["result"]:
             for macro in host["macros"]:
+                # 安全检查：确保macro字典包含value键
+                if "value" not in macro:
+                    logger.warning(f"主机 '{host.get('name', 'unknown')}' 的宏缺少value键: {macro}")
+                    continue
                 if macro["value"] == uuid:  # 检测zabbix中主机是否存在的逻辑：遍历所有主机，匹配宏内是否存在虚拟机UUID
                     return host
 
