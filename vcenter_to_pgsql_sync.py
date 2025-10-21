@@ -18,6 +18,31 @@ class DataProcess:
         self.pgsql = self.conn.cursor()
         self.vcenter = vcenter_obj
 
+    def _check_field_length(self, vm, max_length=255):
+        """
+        检查虚拟机字段是否超长
+        :param vm: 虚拟机数据字典
+        :param max_length: 最大长度限制（默认255）
+        :return: (是否合法, 超长字段列表)
+        """
+        too_long_fields = []
+
+        # 需要检查的字段及其当前值
+        fields_to_check = {
+            'vm_name': vm.get("name", ""),
+            'vm_remark': vm.get("annotation", ""),
+            'cmdb_id': vm.get("cmdb_id", ""),
+            'vm_owner': vm.get("vm_owner", ""),
+            'department': vm.get("department", ""),
+            'ad_user': vm.get("ad_user", "")
+        }
+
+        for field_name, field_value in fields_to_check.items():
+            if field_value and len(str(field_value)) > max_length:
+                too_long_fields.append(f"{field_name}({len(str(field_value))})")
+
+        return len(too_long_fields) == 0, too_long_fields
+
     def start_sync(self):
         self.__sync_datacenter()
         self.__sync_host()
@@ -87,6 +112,14 @@ class DataProcess:
             vms = self.vcenter.get_vm(host[0])
             # if not host[2] == "DISCONNECTED":  # 已与vCenter断开链接的主机不再添加虚拟机数据
             for vm in vms:
+                # 检查字段长度，如果超长则跳过该虚拟机
+                is_valid, too_long_fields = self._check_field_length(vm)
+                if not is_valid:
+                    logger.warning(
+                        f"虚拟机 '{vm.get('name', 'unknown')}' 的字段超长，跳过同步。超长字段: {', '.join(too_long_fields)}"
+                    )
+                    continue
+
                 exist = self.pgsql.execute(f'''
                 SELECT * FROM "vCenter_vm"
                 WHERE vc_name='{self.vcenter.name}'
