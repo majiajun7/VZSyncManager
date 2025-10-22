@@ -29,7 +29,8 @@ class Zabbix:
             "params": {
                 "selectMacros": "extend",
                 "selectInterfaces": "extend",
-                "selectGroups": "extend"
+                "selectGroups": "extend",
+                "selectTags": "extend"
             },
             "auth": self.session,
             "id": 1
@@ -65,7 +66,7 @@ class Zabbix:
 
         return False
 
-    def create_host(self, name, displayname, group_id, template_id=None, interface=None, macros=None, proxy_hostid=0):
+    def create_host(self, name, displayname, group_id, template_id=None, interface=None, macros=None, proxy_hostid=0, tags=None):
         data = {
             "jsonrpc": "2.0",
             "method": "host.create",
@@ -84,6 +85,8 @@ class Zabbix:
             data["params"]["macros"] = macros
         if template_id:
             data["params"]["templates"] = [{"templateid": template_id}]
+        if tags:
+            data["params"]["tags"] = tags
         response = requests.post(self.url, json.dumps(data), headers=self.header)
         result = response.json()
         return result
@@ -102,7 +105,7 @@ class Zabbix:
         return response.json()
 
     def update_host(self, hostid, displayname=None, macros=None, group_list=None, name=None, interface=None,
-                    proxy_hostid=None):
+                    proxy_hostid=None, tags=None):
         data = {
             "jsonrpc": "2.0",
             "method": "host.update",
@@ -124,6 +127,8 @@ class Zabbix:
             data["params"]["interfaces"] = interface
         if proxy_hostid:
             data["params"]["proxy_hostid"] = proxy_hostid
+        if tags is not None:  # 允许传递空列表来清空tags
+            data["params"]["tags"] = tags
 
         response = requests.post(self.url, json.dumps(data), headers=self.header)
         # print("update_host:" + displayname)

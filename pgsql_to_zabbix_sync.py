@@ -86,6 +86,30 @@ def cleanup_unused_host_groups(zabbix_obj, area_gid_dict):
                     logger.info(f"删除无主机的宿主机群组: {group_name} (ID: {group_id})")
 
 
+def build_vm_tags(vm):
+    """
+    根据虚拟机数据构建Zabbix标签
+    :param vm: 虚拟机数据元组
+    :return: 标签列表
+    """
+    tags = []
+
+    # vm[10] = cmdb_id, vm[11] = vm_owner, vm[12] = department, vm[13] = ad_user
+    if len(vm) > 10 and vm[10] and str(vm[10]).strip():
+        tags.append({"tag": "CMDB_ID", "value": str(vm[10]).strip()})
+
+    if len(vm) > 11 and vm[11] and str(vm[11]).strip():
+        tags.append({"tag": "VM_Owner", "value": str(vm[11]).strip()})
+
+    if len(vm) > 12 and vm[12] and str(vm[12]).strip():
+        tags.append({"tag": "Department", "value": str(vm[12]).strip()})
+
+    if len(vm) > 13 and vm[13] and str(vm[13]).strip():
+        tags.append({"tag": "AD_User", "value": str(vm[13]).strip()})
+
+    return tags
+
+
 def run():
     zapi = ZabbixAPI("http://10.20.120.239")
     zapi.login("jiajun.ma", "Abc000425.")
@@ -190,6 +214,7 @@ def run():
                     if zabbix_vm_host:
                         vm_host_macro = None
                         vm_host_group = None
+                        vm_host_tags = None
 
                         vm_url, vm_uuid = get_macro(zabbix_vm_host["macros"])
                         vm_vc_url = pgsql.execute(
@@ -199,6 +224,14 @@ def run():
                         if zabbix_vm_host["name"] != vm[3] or vm_url != vm_vc_url or vm_uuid != vm[2]:
                             vm_host_macro = [{"macro": "{$VMWARE.URL}", "value": vm_vc_url},
                                              {"macro": "{$VMWARE.VM.UUID}", "value": vm[2]}]
+
+                        # 检查是否需要更新tags（资产标签）
+                        new_vm_tags = build_vm_tags(vm)
+                        existing_tags = zabbix_vm_host.get("tags", [])
+
+                        # 比较现有tags和新tags是否不同
+                        if sorted(existing_tags, key=lambda x: x.get("tag", "")) != sorted(new_vm_tags, key=lambda x: x.get("tag", "")):
+                            vm_host_tags = new_vm_tags
 
                         vm_group_info = zabbix_vm_host['groups']
 
@@ -235,7 +268,7 @@ def run():
                                 # 添加群组 1165
                                 vm_host_group.append({"groupid": "1165"})
 
-                        if vm_host_macro or vm_host_group:
+                        if vm_host_macro or vm_host_group or vm_host_tags is not None:
                             update_args = {
                                 "hostid": zabbix_vm_host["hostid"],
                                 "displayname": vm[3],
@@ -244,6 +277,8 @@ def run():
                                 update_args["macros"] = vm_host_macro
                             if vm_host_group:
                                 update_args["group_list"] = vm_host_group
+                            if vm_host_tags is not None:
+                                update_args["tags"] = vm_host_tags
                             zabbix_obj.update_host(**update_args)
 
                             update_parts = []
@@ -251,6 +286,8 @@ def run():
                                 update_parts.append("宏")
                             if vm_host_group:
                                 update_parts.append("群组")
+                            if vm_host_tags is not None:
+                                update_parts.append("标签")
                             logger.info('更新 %s 虚拟机信息: %s' % (vm[3], ','.join(update_parts)))
 
                         # 如果是IT中心物理内网云桌面VCenter，检查并添加模板27097
@@ -295,13 +332,16 @@ def run():
                         vm_host_macro = [{"macro": "{$VMWARE.URL}", "value": vm_vc_url},
                                          {"macro": "{$VMWARE.VM.UUID}", "value": vm[2]}]
 
+                        # 构建虚拟机标签（资产标签）
+                        vm_tags = build_vm_tags(vm)
+
                         # 如果是IT中心物理内网云桌面VCenter，需要同时添加到两个群组
                         if host[0] == "IT中心物理内网云桌面VCenter":
                             # 创建包含两个群组的列表
                             group_list = [{"groupid": group_id}, {"groupid": "1165"}]
-                            # 先创建主机
+                            # 先创建主机（包含tags）
                             result = zabbix_obj.create_host(vm[2], vm[3], group_list, 10124, interface, vm_host_macro,
-                                                            area_proxyid_dict[host[0]])
+                                                            area_proxyid_dict[host[0]], tags=vm_tags)
                             
                             # 根据实际结果记录日志
                             if result and "result" in result and "hostids" in result["result"]:
@@ -345,9 +385,9 @@ def run():
                             except Exception as e:
                                 logger.error('为虚拟机 %s 添加模板27097失败: %s' % (vm[3], str(e)))
                         else:
-                            # 其他vCenter只添加到宿主机群组
+                            # 其他vCenter只添加到宿主机群组（包含tags）
                             result = zabbix_obj.create_host(vm[2], vm[3], group_id, 10124, interface, vm_host_macro,
-                                                   area_proxyid_dict[host[0]])
+                                                   area_proxyid_dict[host[0]], tags=vm_tags)
                             
                             # 根据实际结果记录日志
                             if result and "result" in result and "hostids" in result["result"]:
